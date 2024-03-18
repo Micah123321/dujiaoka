@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_','-',strtolower(app()->getLocale())) }}">
-<body>
 @include('unicorn.layouts._header')
+<body>
+
 @include('unicorn.layouts._nav')
 @yield('content')
 @include('unicorn.layouts._footer')
