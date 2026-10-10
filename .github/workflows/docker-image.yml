@@ -38,6 +38,7 @@ jobs:
           npm run typecheck --prefix frontend
           npm test --prefix frontend
           npm run build --prefix frontend
+          npm run build:admin --prefix frontend
       - name: Install locked PHP dependencies
         run: |
           composer validate --strict --no-check-all --check-lock --no-check-publish --no-plugins

@@ -3,6 +3,7 @@
 .github
 docs
 public/assets/modern
+public/assets/admin
 runtime.env.edit
 backups
 migration
