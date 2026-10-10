@@ -1,0 +1,32 @@
+# PayPal v1 compatibility without the deprecated SDK
+
+The legacy gateway and return routes now use PaypalPaymentsClient and ordinary arrays rather than PayPal Rest/Api classes. The root composer manifest, lock and vendor no longer contain paypal/rest-api-sdk-php 1.14.0. Actual Composer removal changed one package only: zero installs, zero updates, one removal, with scripts/plugins disabled. This preserves v1 API objects; it does not convert them to Orders V2 or enable a new payment mode.
+
+## Protocol and configuration
+
+The previously installed 1.14.0 Payment source verified POST /v1/payments/payment, GET /v1/payments/payment/{id} and POST /v1/payments/payment/{id}/execute. Execute sends payer_id only, without replacing transactions or amounts. The adapter inherits the existing fixed live/sandbox HTTPS transport, volatile OAuth cache, TLS verification, no redirects, connect3/total10-second bounds and sanitized errors. Create/execute have separate stable request identifiers; no v1 retention duration or automatic POST retry is assumed.
+
+The retained controller stays in live mode, matching its old behavior. merchant_key remains Client ID and merchant_pem remains Client Secret. Approval redirects require a single HTTPS approval_url on the exact PayPal host for that mode, with no credentials, fragment or unusual port. Supplier paths/query are retained, including old webscr approval links.
+
+Existing /pay/paypal/{payway}/{orderSN}, return_url and query names success/orderSN/paymentId/PayerID remain. With PAYPAL_ORDERS_V2=true, the entry delegates to the separate supported Orders V2 implementation; both old callback routes return409. Switch requirements are in [Orders V2 activation](paypal-orders.md). Legacy unsigned notify_url keeps its HTTP200 acknowledgement without logging raw payloads or fulfilling orders.
+
+## Confirmation and unknown execution
+
+1. GET the existing provider Payment using the current merchant credentials. Verify exact Payment ID, sale intent, a single transaction, invoice number, USD and amount before execute. In frozen mode use the saved quote; pre-freeze objects use their authenticated provider amount instead of the current FX rate.
+2. For a created Payment, lock the existing order and gateway, then recheck price, selected gateway, credentials, quote and modern channel bindings. Only a waiting order with an open gateway can reserve execution. Save the Payment ID in the existing order trade_no without events, commit the transaction, then make the provider request. No new table or flag is required.
+3. A matching reserved Payment ID makes later callbacks GET-only, including when GET still reports created days after an unknown execute response. A different reserved ID stops another execution. Checkout reentry also returns the detail page instead of creating another object. The reservation has no TTL.
+4. An approved Payment must contain one completed Sale with matching parent Payment, USD amount and invoice. Pending/missing/refunded/mismatched resources never fulfill. Before actual card/sales fulfillment, the transaction locks and checks the context again, including any reserved identifier. No provider request runs inside those transactions.
+
+Frozen payments retain Sale ID as final trade_no; non-frozen payments keep the old Payment ID identifier, preserving repeated callbacks for already completed legacy orders. Already-approved objects need no Payer execution or current rate. A closed gateway may confirm a previously accepted payment; expired paid orders retain the existing abnormal/manual treatment and do not consume a card.
+
+A crash after reservation but before POST, an explicit execute rejection or an unresolved provider state leaves the reservation for GET/manual reconciliation. Do not clear it, switch gateway/mode or rotate credentials to trigger a blind retry. Confirm the provider result and any settlement before manual intervention. The adapter has no automatic refund, untracked-object search or background v1 reconciliation. Durable single-object creation and signed/background reconciliation are provided by the separate opt-in V2 path.
+
+## Actual verification
+
+- Independent client: 113 tests / 629 assertions on both PHP7.4 and PHP8.2. Real Guzzle MockHandler proves fixed endpoints, JSON/form/headers, OAuth reuse/rotation, unchanged execute amounts, bounded TLS options, request keys, no automatic retry, redaction and rejected identifiers/approval redirects.
+- Native route: 30 tests / 321 assertions on both framework trees. Real routing, Guzzle, frozen quote lookup, reservation and card/sales transactions run with local provider responses; only actual notifications are suppressed. Tests cover duplicate callbacks, unknown execute with GET still created after three days, subsequent approved recovery, checkout reentry, malformed payer input, price/gateway/credential/route/quote changes both before execution and before fulfillment, default-off without quote tables, closed/expired objects and unsigned notifications.
+- A read-only audit found the initial unknown-result test only transitioned to approved. The exact created-after-error regression reproduced three executes before the reservation change, then passed with one execute and eventual GET-only recovery.
+- Final root PHP7.4 suite: 557 tests / 5060 assertions. Isolated Laravel12 PHP8.2 suite: all Unit/Feature tests plus six modern SMTP protocol cases, 563 tests / 4622 assertions. No mixed legacy classes remain excluded.
+- Composer validate and root PHP7.4 platform checks pass. Optimized root autoload excludes the isolated candidate vendor and generated runtime files so they do not enter the root class map.
+
+No live PayPal approval, charge, SMTP, shop database, deployment or credential changes were made. Native route tests use SQLite. Subsequent [MySQL acceptance](mysql-concurrency.md) now passes the actual controller/client/frozen-quote reservation, still-created retry and approved-Sale recovery in both dependency trees: three races/six workers, one execute/six GETs, an independent committed-marker read and one real card/sales increment. All36 groups/85 workers and seven forward migrations pass per tree. This covers the fixed isolated MySQL8.4 schema, while actual deployment compatibility remains separate. Yansongda3, admin/assets, modern test tooling and the final PHP/framework/container/worker combination remain separate work.
