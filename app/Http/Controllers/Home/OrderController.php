@@ -8,7 +8,6 @@ use App\Models\Order;
 use App\Service\OrderProcessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Facades\DB;
 
 
 /**
@@ -56,7 +55,6 @@ class OrderController extends BaseController
      */
     public function createOrder(Request $request)
     {
-        DB::beginTransaction();
         try {
             $this->orderService->validatorCreateOrder($request);
             $goods = $this->orderService->validatorGoods($request);
@@ -81,12 +79,10 @@ class OrderController extends BaseController
             $this->orderProcessService->setSearchPwd($request->input('search_pwd', ''));
             // 创建订单
             $order = $this->orderProcessService->createOrder();
-            DB::commit();
             // 设置订单cookie
             $this->queueCookie($order->order_sn);
             return redirect(url('/bill', ['orderSN' => $order->order_sn]));
         } catch (RuleValidationException $exception) {
-            DB::rollBack();
             return $this->err($exception->getMessage());
         }
     }
@@ -143,17 +139,17 @@ class OrderController extends BaseController
      */
     public function checkOrderStatus(string $orderSN)
     {
-        $order = $this->orderService->detailOrderSN($orderSN);
+        $status = $this->orderService->statusByOrderSN($orderSN);
         // 订单不存在或者已经过期
-        if (!$order || $order->status == Order::STATUS_EXPIRED) {
+        if ($status === null || $status == Order::STATUS_EXPIRED) {
             return response()->json(['msg' => 'expired', 'code' => 400001]);
         }
         // 订单已经支付
-        if ($order->status == Order::STATUS_WAIT_PAY) {
+        if ($status == Order::STATUS_WAIT_PAY) {
             return response()->json(['msg' => 'wait....', 'code' => 400000]);
         }
         // 成功
-        if ($order->status > Order::STATUS_WAIT_PAY) {
+        if ($status > Order::STATUS_WAIT_PAY) {
             return response()->json(['msg' => 'success', 'code' => 200]);
         }
     }

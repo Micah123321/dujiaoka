@@ -5,7 +5,13 @@ namespace App\Http\Controllers\Pay;
 use App\Exceptions\RuleValidationException;
 use App\Http\Controllers\PayController;
 use Illuminate\Http\Request;
-use GuzzleHttp\Client;
+use App\Service\ExchangeRateService;
+use App\Service\PaymentQuoteService;
+use App\Service\PaymentGatewayLock;
+use App\Payments\PaymentReceipt;
+use App\Models\Order;
+use App\Models\Pay;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 use URL;
 
@@ -18,19 +24,24 @@ class StripeController extends PayController
 
         // 加载网关
         $this->loadGateWay($orderSN, $payway);
+        if (app(\App\Service\StripePaymentIntentService::class)->enabled()) {
+            return app(StripeIntentController::class)->checkout($this->order, $this->payGateway, $payway);
+        }
         //构造要请求的参数数组，无需改动
         switch ($payway) {
             case 'wx':
             case 'alipay':
             default:
                 try {
+                    \Stripe\Stripe::setApiVersion(null);
                     \Stripe\Stripe::setApiKey($this->payGateway->merchant_id);
                     $amount = bcmul($this->order->actual_price, 100, 2);
                     $price = $this->order->actual_price;
-                    $usd = bcmul($this->getUsdCurrency($this->order->actual_price), 100, 2);
+                    $usd = bcmul(app(PaymentQuoteService::class)->cnyToUsd($this->order, $this->payGateway, 'cmb'), 100, 0);
                     $orderid = $this->order->order_sn;
                     $pk = $this->payGateway->merchant_id;
-                    $return_url = site_url() . $this->payGateway->pay_handleroute . '/return_url/?orderid=' . $this->order->order_sn;
+                    $return_url = url(rtrim($this->payGateway->pay_handleroute, '/') . '/return_url')
+                        . '?orderid=' . rawurlencode($this->order->order_sn);
                     $html = "<html class=\"js cssanimations\">
 <head lang=\"en\">
     <meta charset=\"UTF-8\">
@@ -423,6 +434,8 @@ class StripeController extends PayController
 </html>";
 
                     return $html;
+                } catch (RuleValidationException $exception) {
+                    return $this->err($exception->getMessage());
                 } catch (\Exception $e) {
                     throw new RuleValidationException(__('dujiaoka.prompt.abnormal_payment_channel') . $e->getMessage());
                 }
@@ -432,13 +445,24 @@ class StripeController extends PayController
 
     public function returnUrl(Request $request)
     {
-
+        if (app(\App\Service\StripePaymentIntentService::class)->enabled()) {
+            return response()->json(['message' => __('dujiaoka.prompt.payment_method_locked')], 409)->header('Cache-Control', 'no-store');
+        }
+        if (app(PaymentQuoteService::class)->enabled()) {
+            $orderSN = $request->input('orderid');
+            if (!is_string($orderSN) || $orderSN === '') {
+                return 'fail';
+            }
+            $this->chargeQuotedSource($request);
+            return redirect(url('detail-order-sn', ['orderSN' => $orderSN]));
+        }
         $data = $request->all();
         $cacheord = $this->orderService->detailOrderSN($data['orderid']);
         if (!$cacheord) {
             return redirect(url('detail-order-sn', ['orderSN' => $data['orderid']]));
         }
         $payGateway = $this->payService->detail($cacheord->pay_id);
+        \Stripe\Stripe::setApiVersion(null);
         \Stripe\Stripe::setApiKey($payGateway -> merchant_pem);
         $source_object = \Stripe\Source::retrieve($data['source']);
         //die($source_object);
@@ -457,7 +481,12 @@ class StripeController extends PayController
 
     public function check(Request $request)
     {
-
+        if (app(\App\Service\StripePaymentIntentService::class)->enabled()) {
+            return response()->json(['message' => __('dujiaoka.prompt.payment_method_locked')], 409)->header('Cache-Control', 'no-store');
+        }
+        if (app(PaymentQuoteService::class)->enabled()) {
+            return $this->chargeQuotedSource($request) ? 'success' : 'fail';
+        }
         $data = $request->all();
         $cacheord = $this->orderService->detailOrderSN($data['orderid']);
         if (!$cacheord) {
@@ -465,6 +494,7 @@ class StripeController extends PayController
             return 'fail';
         } else {
             $payGateway = $this->payService->detail($cacheord->pay_id);
+            \Stripe\Stripe::setApiVersion(null);
             \Stripe\Stripe::setApiKey($payGateway -> merchant_pem);
             $source_object = \Stripe\Source::retrieve($data['source']);
             if ($source_object->status == 'chargeable') {
@@ -486,6 +516,9 @@ class StripeController extends PayController
 
     public function charge(Request $request)
     {
+        if (app(\App\Service\StripePaymentIntentService::class)->enabled()) {
+            return response()->json(['message' => __('dujiaoka.prompt.payment_method_locked')], 409)->header('Cache-Control', 'no-store');
+        }
         $data = $request->all();
         $cacheord = $this->orderService->detailOrderSN($data['orderid']);
         if (!$cacheord) {
@@ -494,46 +527,128 @@ class StripeController extends PayController
         } else {
             try {
                 $payGateway = $this->payService->detail($cacheord->pay_id);
+                \Stripe\Stripe::setApiVersion(null);
                 \Stripe\Stripe::setApiKey($payGateway -> merchant_pem);
+                $quotes = app(PaymentQuoteService::class);
+                if ($quotes->enabled() && (!isset($data['stripeToken']) || !is_string($data['stripeToken'])
+                    || !preg_match('/\Atok_[a-zA-Z0-9_]{1,200}\z/', $data['stripeToken']))) {
+                    throw new RuleValidationException(__('dujiaoka.prompt.payment_quote_invalid'));
+                }
+                $usd = $quotes->cnyToUsd($cacheord, $payGateway, 'cmb');
+                $minor = bcmul($usd, 100, 0);
+                $guard = $quotes->enabled() ? $this->quotedReceiptGuard($cacheord, $payGateway, $usd) : null;
+                $options = $quotes->enabled() ? $this->chargeOptions($cacheord, $data['stripeToken']) : null;
                 $result = \Stripe\Charge::create([
-                    'amount' => bcmul($this->getUsdCurrency($cacheord->actual_price), 100,0),
+                    'amount' => $minor,
                     'currency' => 'usd',
                     'source' => $data['stripeToken'],
-                ]);
+                ], $options);
+                $trade = $quotes->enabled() ? PaymentReceipt::stripeChargeId($result->toArray(), 'usd', $minor) : $data['stripeToken'];
+                if ($quotes->enabled() && $trade === null) {
+                    throw new RuleValidationException(__('dujiaoka.prompt.payment_quote_invalid'));
+                }
                 if ($result->status == 'succeeded') {
-                    $this->orderProcessService->completedOrder($data['orderid'], $cacheord->actual_price, $data['stripeToken']);
+                    if ($guard !== null) {
+                        $this->orderProcessService->completedOrder($data['orderid'], $cacheord->actual_price, $trade, $guard);
+                    } else {
+                        $this->orderProcessService->completedOrder($data['orderid'], $cacheord->actual_price, $trade);
+                    }
                     return 'success';
                 }
                 return $result;
-            } catch (\Exception $e) {
+            } catch (RuleValidationException $e) {
                 return $e->getMessage();
+            } catch (\Throwable $e) {
+                return app(PaymentQuoteService::class)->enabled()
+                    ? __('dujiaoka.prompt.payment_quote_unavailable') : $e->getMessage();
             }
+        }
+    }
+
+    private function quotedReceiptGuard(Order $order, Pay $gateway, string $usd): callable
+    {
+        $bindingGuard = app(PaymentGatewayLock::class)->receiptGuard($order, $gateway, 'pay/stripe');
+        return function (Order $locked) use ($bindingGuard, $gateway, $usd) {
+            $bindingGuard($locked);
+            if (app(PaymentQuoteService::class)->frozenUsd($locked, $gateway, 'cmb') !== $usd) {
+                throw new RuleValidationException(__('dujiaoka.prompt.payment_quote_invalid'));
+            }
+        };
+    }
+
+    private function chargeOptions(Order $order, string $source): array
+    {
+        return ['idempotency_key' => 'dujiaoka-v1-' . hash('sha256', $order->id . ':' . $order->pay_id . ':' . $source)];
+    }
+
+    private function chargeQuotedSource(Request $request): bool
+    {
+        $orderSN = $request->input('orderid');
+        $sourceId = $request->input('source');
+        if (!is_string($orderSN) || $orderSN === '' || !is_string($sourceId)
+            || !preg_match('/\Asrc_[a-zA-Z0-9_]{1,200}\z/', $sourceId)) {
+            return false;
+        }
+        try {
+            $order = $this->orderService->detailOrderSN($orderSN);
+            if (!$order) {
+                return false;
+            }
+            $gateway = Pay::whereKey($order->pay_id)->first();
+            if (!$gateway || trim((string) $gateway->pay_handleroute, '/') !== 'pay/stripe') {
+                return false;
+            }
+            $usd = app(PaymentQuoteService::class)->frozenUsd($order, $gateway, 'cmb');
+            $guard = $this->quotedReceiptGuard($order, $gateway, $usd);
+            \Stripe\Stripe::setApiVersion(null);
+            \Stripe\Stripe::setApiKey($gateway->merchant_pem);
+            $source = \Stripe\Source::retrieve($sourceId);
+            $currency = $source->type === 'alipay' ? 'cny' : ($source->type === 'wechat' ? 'usd' : null);
+            $minor = $currency === 'cny' ? bcmul($order->actual_price, 100, 0) : bcmul($usd, 100, 0);
+            if ($source->id !== $sourceId || !$source->owner || $source->owner->name !== $orderSN
+                || $currency === null || !PaymentReceipt::minorMatches($source->amount, $source->currency, $currency, $minor)
+                || !in_array($source->status, ['chargeable', 'consumed'], true)) {
+                return false;
+            }
+            // Stripe may prune idempotency keys after 24 hours; never replay old captures.
+            $age = $order->created_at ? \Carbon\Carbon::now()->getTimestamp() - $order->created_at->getTimestamp() : -1;
+            if ($age < 0 || $age >= 23 * 3600) {
+                return false;
+            }
+            if ($source->status === 'chargeable') {
+                DB::transaction(function () use ($order, $gateway, $guard) {
+                    $current = Order::whereKey($order->id)->lockForUpdate()->first();
+                    $pay = Pay::whereKey($gateway->id)->lockForUpdate()->first();
+                    if (!$current || !$pay || (int) $current->status !== Order::STATUS_WAIT_PAY
+                        || (int) $pay->is_open !== Pay::STATUS_OPEN) {
+                        throw new RuleValidationException(__('dujiaoka.prompt.payment_quote_invalid'));
+                    }
+                    $guard($current);
+                });
+            }
+            $charge = \Stripe\Charge::create([
+                'amount' => $minor, 'currency' => $currency, 'source' => $sourceId,
+            ], $this->chargeOptions($order, $sourceId));
+            $trade = PaymentReceipt::stripeChargeId($charge->toArray(), $currency, $minor, $sourceId);
+            if ($trade === null) {
+                return false;
+            }
+            $this->orderProcessService->completedOrder($orderSN, $order->actual_price, $trade, $guard);
+            return true;
+        } catch (\Throwable $exception) {
+            return false;
         }
     }
 
     /**
      * 根据RMB获取美元
      * @param $cny
-     * @return float|int
-     * @throws \Exception
+     * @return string
+     * @throws RuleValidationException
      */
     public function getUsdCurrency($cny)
     {
-        $client = new Client();
-        $res = $client->get('https://m.cmbchina.com/api/rate/fx-rate');
-        $fxrate = json_decode($res->getBody(), true);
-        $data = $fxrate['body']['data'];
-        if (!isset($data)) {
-            throw new \Exception('汇率接口异常');
-        }
-        $dfFxrate = 0.13;
-        foreach ($data as $item) {
-            if ($item['ccyNbr'] == "美元") {
-                $dfFxrate = bcdiv(100, $item['rtcOfr'], 2);
-                break;
-            }
-        }
-        return bcmul($cny , $dfFxrate , 2);
+        return app(ExchangeRateService::class)->cnyToUsd($cny, 'cmb');
     }
 
 

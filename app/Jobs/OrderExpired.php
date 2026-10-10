@@ -34,15 +34,19 @@ class OrderExpired implements ShouldQueue
      */
     private $orderSN;
 
+    // Default keeps jobs serialized before this release compatible.
+    private $expiresAt = null;
+
 
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct(string $orderSN)
+    public function __construct(string $orderSN, ?int $expiresAt = null)
     {
         $this->orderSN = $orderSN;
+        $this->expiresAt = $expiresAt;
     }
 
     /**
@@ -52,12 +56,6 @@ class OrderExpired implements ShouldQueue
      */
     public function handle()
     {
-        // 如果x分钟后还没支付就算过期
-        $order = app('Service\OrderService')->detailOrderSN($this->orderSN);
-        if ($order && $order->status == Order::STATUS_WAIT_PAY) {
-            app('Service\OrderService')->expiredOrderSN($this->orderSN);
-            // 回退优惠券
-            CouponBack::dispatch($order);
-        }
+        app('Service\OrderService')->expiredOrderSN($this->orderSN, $this->expiresAt);
     }
 }

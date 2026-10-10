@@ -61,9 +61,9 @@ class OrderService
             'gid' => 'required' ,
             'email' => ['required', 'email'],
             'payway' => ['required', 'integer'],
-            'search_pwd' => [new SearchPwd()],
+            'search_pwd' => [dujiaoka_config_get('is_open_search_pwd') == BaseModel::STATUS_OPEN ? 'required' : 'nullable', new SearchPwd()],
             'by_amount' => ['required', 'integer', 'min:1'],
-            'img_verify_code' => [new VerifyImg()],
+            'img_verify_code' => [dujiaoka_config_get('is_open_img_code') == BaseModel::STATUS_OPEN ? 'required' : 'nullable', new VerifyImg()],
         ], [
             'by_amount.required' =>  __('dujiaoka.prompt.buy_amount_format_error'),
             'by_amount.integer' =>  __('dujiaoka.prompt.buy_amount_format_error'),
@@ -81,9 +81,9 @@ class OrderService
         if (
             dujiaoka_config_get('is_open_geetest') == BaseModel::STATUS_OPEN
             &&
-            !Validator::make($request->all(),
-                ['geetest_challenge' => 'geetest',],
-                [ 'geetest' => __('dujiaoka.prompt.geetest_validate_fail')])
+            Validator::make($request->all(),
+                ['geetest_challenge' => ['required', 'geetest']],
+                [ 'geetest' => __('dujiaoka.prompt.geetest_validate_fail')])->fails()
 
         ) {
             throw new RuleValidationException(__('dujiaoka.prompt.geetest_validate_fail'));
@@ -209,6 +209,12 @@ class OrderService
      * @copyright assimon<ashang@utf8.hk>
      * @link      http://utf8.hk/
      */
+    public function statusByOrderSN(string $orderSN): ?int
+    {
+        $status = Order::query()->where('order_sn', $orderSN)->value('status');
+        return $status === null ? null : (int) $status;
+    }
+
     public function detailOrderSN(string $orderSN):? Order
     {
         $order = Order::query()->with(['coupon', 'pay', 'goods'])->where('order_sn', $orderSN)->first();
@@ -225,9 +231,26 @@ class OrderService
      * @copyright assimon<ashang@utf8.hk>
      * @link      http://utf8.hk/
      */
-    public function expiredOrderSN(string $orderSN): bool
+    public function expirationMinutes(): int
     {
-        return Order::query()->where('order_sn', $orderSN)->update(['status' => Order::STATUS_EXPIRED]);
+        return max(1, (int) dujiaoka_config_get('order_expire_time', 5));
+    }
+
+    public function expiredOrderSN(string $orderSN, ?int $expiresAt = null): bool
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($orderSN, $expiresAt) {
+            $order = Order::query()->where('order_sn', $orderSN)->lockForUpdate()->first();
+            if (!$order || $order->status != Order::STATUS_WAIT_PAY) {
+                return false;
+            }
+            $deadline = $expiresAt ?? $order->created_at->copy()->addMinutes($this->expirationMinutes())->getTimestamp();
+            if (\Carbon\Carbon::now()->getTimestamp() < $deadline) {
+                return false;
+            }
+            Order::query()->whereKey($order->id)->update(['status' => Order::STATUS_EXPIRED]);
+            $this->returnCoupon($orderSN);
+            return true;
+        });
     }
 
     /**
@@ -240,6 +263,22 @@ class OrderService
      * @copyright assimon<ashang@utf8.hk>
      * @link      http://utf8.hk/
      */
+    public function returnCoupon(string $orderSN): bool
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($orderSN) {
+            $order = Order::query()->where('order_sn', $orderSN)->lockForUpdate()->first();
+            if (!$order || $order->status != Order::STATUS_EXPIRED || !$order->coupon_id
+                || $order->coupon_ret_back == Order::COUPON_BACK_OK) {
+                return false;
+            }
+            if (!$this->couponService->retIncrByID($order->coupon_id)) {
+                throw new \RuntimeException('Coupon return failed.');
+            }
+            $this->couponIsBack($orderSN);
+            return true;
+        });
+    }
+
     public function couponIsBack(string $orderSN): bool
     {
         return Order::query()->where('order_sn', $orderSN)->update(['coupon_ret_back' => Order::COUPON_BACK_OK]);

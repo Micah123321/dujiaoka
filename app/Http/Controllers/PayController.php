@@ -95,8 +95,13 @@ class PayController extends BaseController
             throw new RuleValidationException(__('dujiaoka.prompt.pay_gateway_does_not_exist'));
         }
         // 临时保存支付方式
-        $this->order->pay_id = $this->payGateway->id;
-        $this->order->save();
+        $intents = app(\App\Service\PaymentGatewayLock::class);
+        if ($intents->enabled()) {
+            $this->order = $intents->selectGateway($this->order, $this->payGateway);
+        } else {
+            $this->order->pay_id = $this->payGateway->id;
+            $this->order->save();
+        }
     }
 
     /**

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Home;
 use App\Exceptions\RuleValidationException;
 use App\Http\Controllers\BaseController;
 use App\Models\Pay;
-use Germey\Geetest\Geetest;
+use App\Captcha\Geetest;
 use Illuminate\Database\DatabaseServiceProvider;
 use Illuminate\Database\QueryException;
 use Illuminate\Encryption\Encrypter;

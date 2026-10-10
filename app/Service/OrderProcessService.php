@@ -11,7 +11,6 @@ namespace App\Service;
 
 use App\Exceptions\RuleValidationException;
 use App\Jobs\ApiHook;
-use App\Jobs\MailSend;
 use App\Jobs\OrderExpired;
 use App\Jobs\ServerJiang;
 use App\Jobs\TelegramPush;
@@ -311,62 +310,71 @@ class OrderProcessService
      */
     public function createOrder(): Order
     {
+        if (DB::transactionLevel() !== 0) {
+            throw new RuleValidationException('Order creation requires its own transaction.');
+        }
         try {
-            $order = new Order();
-            // 生成订单号
-            $order->order_sn = strtoupper(Str::random(16));
-            // 设置商品
-            $order->goods_id = $this->goods->id;
-            // 标题
-            $order->title = $this->goods->gd_name . ' x ' . $this->buyAmount;
-            // 订单类型
-            $order->type = $this->goods->type;
-            // 查询密码
-            $order->search_pwd = $this->searchPwd;
-            // 邮箱
-            $order->email = $this->email;
-            // 支付方式.
-            $order->pay_id = $this->payID;
-            // 商品单价
-            $order->goods_price = $this->goods->actual_price;
-            // 购买数量
-            $order->buy_amount = $this->buyAmount;
-            // 订单详情
-            $order->info = $this->otherIpt;
-            // ip地址
-            $order->buy_ip = $this->buyIP;
-            // 优惠码优惠价格
-            $order->coupon_discount_price = $this->calculateTheCouponPrice();
-            if ($this->coupon) {
-                $order->coupon_id = $this->coupon->id;
-            }
-            // 批发价
-            $order->wholesale_discount_price = $this->calculateTheWholesalePrice();
-            // 订单总价
-            $order->total_price = $this->calculateTheTotalPrice();
-            // 订单实际需要支付价格
-            $order->actual_price = $this->calculateTheActualPrice(
-                $this->calculateTheTotalPrice(),
-                $this->calculateTheCouponPrice(),
-                $this->calculateTheWholesalePrice()
-            );
-            // 保存订单
-            $order->save();
-            // 如果有用到优惠券
-            if ($this->coupon) {
-                // 设置优惠码已经使用
-                $this->couponService->used($this->coupon->coupon);
-                // 使用次数-1
-                $this->couponService->retDecr($this->coupon->coupon);
-            }
-            // 将订单加入队列 x分钟后过期
-            $expiredOrderDate = dujiaoka_config_get('order_expire_time', 5);
-            OrderExpired::dispatch($order->order_sn)->delay(Carbon::now()->addMinutes($expiredOrderDate));
-            return $order;
-        } catch (\Exception $exception) {
+            $order = DB::transaction(function () {
+                $order = new Order();
+                // 生成订单号
+                $order->order_sn = strtoupper(Str::random(16));
+                // 设置商品
+                $order->goods_id = $this->goods->id;
+                // 标题
+                $order->title = $this->goods->gd_name . ' x ' . $this->buyAmount;
+                // 订单类型
+                $order->type = $this->goods->type;
+                // 查询密码
+                $order->search_pwd = $this->searchPwd;
+                // 邮箱
+                $order->email = $this->email;
+                // 支付方式.
+                $order->pay_id = $this->payID;
+                // 商品单价
+                $order->goods_price = $this->goods->actual_price;
+                // 购买数量
+                $order->buy_amount = $this->buyAmount;
+                // 订单详情
+                $order->info = $this->otherIpt;
+                // ip地址
+                $order->buy_ip = $this->buyIP;
+                // 优惠码优惠价格
+                $order->coupon_discount_price = $this->calculateTheCouponPrice();
+                if ($this->coupon) {
+                    $order->coupon_id = $this->coupon->id;
+                }
+                // 批发价
+                $order->wholesale_discount_price = $this->calculateTheWholesalePrice();
+                // 订单总价
+                $order->total_price = $this->calculateTheTotalPrice();
+                // 订单实际需要支付价格
+                $order->actual_price = $this->calculateTheActualPrice(
+                    $this->calculateTheTotalPrice(),
+                    $this->calculateTheCouponPrice(),
+                    $this->calculateTheWholesalePrice()
+                );
+                // 保存订单
+                $order->save();
+                // 如果有用到优惠券
+                if ($this->coupon) {
+                    if (!$this->couponService->retDecr($this->coupon->coupon)) {
+                        throw new RuleValidationException(__('dujiaoka.prompt.coupon_lack_of_available_opportunities'));
+                    }
+                }
+                return $order;
+            });
+        } catch (\Throwable $exception) {
             throw new RuleValidationException($exception->getMessage());
         }
 
+        // The committed order is the durable fallback if queue delivery fails.
+        try {
+            $deadline = $order->created_at->copy()->addMinutes($this->orderService->expirationMinutes());
+            OrderExpired::dispatch($order->order_sn, $deadline->getTimestamp())->delay($deadline);
+        } catch (\Throwable $exception) {
+            error_log('Order expiry dispatch failed for ' . $order->order_sn . ': ' . $exception->getMessage());
+        }
+        return $order;
     }
 
 
@@ -382,58 +390,97 @@ class OrderProcessService
      * @copyright assimon<ashang@utf8.hk>
      * @link      http://utf8.hk/
      */
-    public function completedOrder(string $orderSN, float $actualPrice, string $tradeNo = '')
+    public function completedOrder(string $orderSN, float $actualPrice, string $tradeNo = '', ?callable $paymentGuard = null)
     {
-        DB::beginTransaction();
+        if (DB::transactionLevel() !== 0) {
+            throw new RuleValidationException('Payment completion requires its own transaction.');
+        }
+        $changed = false;
+        $outbox = app(NotificationOutboxService::class);
         try {
-            // 得到订单详情
-            $order = $this->orderService->detailOrderSN($orderSN);
-            if (!$order) {
-                throw new \Exception(__('dujiaoka.prompt.order_does_not_exist'));
-            }
-            // 订单已经处理
-            if ($order->status == Order::STATUS_COMPLETED) {
-                throw new \Exception(__('dujiaoka.prompt.order_status_completed'));
-            }
-            $bccomp = bccomp($order->actual_price, $actualPrice, 2);
-            // 金额不一致
-            if ($bccomp != 0) {
-                throw new \Exception(__('dujiaoka.prompt.order_inconsistent_amounts'));
-            }
-            $order->actual_price = $actualPrice;
-            $order->trade_no = $tradeNo;
-            // 区分订单类型
-            // 自动发货
-            if ($order->type == Order::AUTOMATIC_DELIVERY) {
-                $completedOrder = $this->processAuto($order);
-            } else {
-                $completedOrder = $this->processManual($order);
-            }
-            // 销量加上
-            $this->goodsService->salesVolumeIncr($order->goods_id, $order->buy_amount);
-            DB::commit();
-            // 如果开启了server酱
-            if (dujiaoka_config_get('is_open_server_jiang', 0) == BaseModel::STATUS_OPEN) {
-                ServerJiang::dispatch($order);
-            }
-            // 如果开启了TG推送
-            if (dujiaoka_config_get('is_open_telegram_push', 0) == BaseModel::STATUS_OPEN) {
-                TelegramPush::dispatch($order);
-            }
-            // 如果开启了Bark推送
-            if (dujiaoka_config_get('is_open_bark_push', 0) == BaseModel::STATUS_OPEN) {
-                BarkPush::dispatch($order);
-            }
-            // 如果开启了企业微信Bot推送
-            if (dujiaoka_config_get('is_open_qywxbot_push', 0) == BaseModel::STATUS_OPEN) {
-                WorkWeiXinPush::dispatch($order);
-            }
-            // 回调事件
-            ApiHook::dispatch($order);
-            return $completedOrder;
-        } catch (\Exception $exception) {
-            DB::rollBack();
+            $order = DB::transaction(function () use ($orderSN, $actualPrice, $tradeNo, $paymentGuard, $outbox, &$changed) {
+                $order = Order::query()->where('order_sn', $orderSN)->lockForUpdate()->first();
+                if (!$order) {
+                    throw new \RuntimeException(__('dujiaoka.prompt.order_does_not_exist'));
+                }
+                // Modern receipt guards hold gateway/binding locks until the fulfillment commits.
+                if ($paymentGuard !== null) {
+                    $paymentGuard($order);
+                }
+                if (bccomp($order->actual_price, $actualPrice, 2) != 0) {
+                    throw new \RuntimeException(__('dujiaoka.prompt.order_inconsistent_amounts'));
+                }
+                if ($order->status != Order::STATUS_WAIT_PAY && $order->status != Order::STATUS_EXPIRED) {
+                    if ((string) $order->trade_no !== '' && $tradeNo !== '' && (string) $order->trade_no !== $tradeNo) {
+                        throw new \RuntimeException('Payment transaction does not match.');
+                    }
+                    return $order;
+                }
+                $changed = true;
+                $order->trade_no = $tradeNo;
+                if ($order->status == Order::STATUS_EXPIRED) {
+                    // Finish returns from legacy queued expiry jobs before recording late payment.
+                    if ($this->orderService->returnCoupon($orderSN)) {
+                        $order->coupon_ret_back = Order::COUPON_BACK_OK;
+                    }
+                    // A refunded coupon or released inventory must not be consumed again.
+                    $order->status = Order::STATUS_ABNORMAL;
+                    $order->info = 'Late payment received; manual reconciliation/refund required. ' . $order->info;
+                    $this->saveOrderWithoutNotifications($order);
+                    $outbox->recordPayment($order);
+                    return $order;
+                }
+                if ($order->type == Order::AUTOMATIC_DELIVERY) {
+                    $this->processAuto($order);
+                } else {
+                    $this->processManual($order);
+                }
+                $this->goodsService->salesVolumeIncr($order->goods_id, $order->buy_amount);
+                $outbox->recordPayment($order);
+                return $order;
+            });
+        } catch (\Throwable $exception) {
             throw new RuleValidationException($exception->getMessage());
+        }
+        if ($changed) {
+            // Notification failures must never turn a committed payment into a failed callback.
+            try {
+                $outbox->publishDue(100, (int) $order->id);
+                $this->notifyOrder($order);
+            } catch (\Throwable $exception) {
+                error_log('Order notification failed for ' . $orderSN . ': ' . $exception->getMessage());
+            }
+        }
+        return $order;
+    }
+
+    private function saveOrderWithoutNotifications(Order $order): void
+    {
+        Order::withoutEvents(function () use ($order) {
+            $order->save();
+        });
+    }
+
+    protected function notifyOrder(Order $order): void
+    {
+        event(new \App\Events\OrderUpdated($order));
+        if (!app(NotificationOutboxService::class)->mailEnabled() &&
+            ($order->status == Order::STATUS_PENDING || $order->status == Order::STATUS_COMPLETED)) {
+            $mail = app(PaymentMailService::class);
+            app(\Illuminate\Contracts\Bus\Dispatcher::class)->dispatch($mail->job($mail->recipe($order), false));
+        }
+        foreach ([
+            'is_open_server_jiang' => ServerJiang::class,
+            'is_open_telegram_push' => TelegramPush::class,
+            'is_open_bark_push' => BarkPush::class,
+            'is_open_qywxbot_push' => WorkWeiXinPush::class,
+        ] as $key => $job) {
+            if (dujiaoka_config_get($key, 0) == BaseModel::STATUS_OPEN) {
+                $job::dispatch($order);
+            }
+        }
+        if (!app(NotificationOutboxService::class)->apiHookEnabled()) {
+            ApiHook::dispatch($order);
         }
     }
 
@@ -449,30 +496,16 @@ class OrderProcessService
      */
     public function processManual(Order $order)
     {
+        if (!$this->goodsService->inStockDecr($order->goods_id, $order->buy_amount)) {
+            $order->status = Order::STATUS_ABNORMAL;
+            $order->info = 'Paid order requires manual fulfillment: insufficient stock. ' . $order->info;
+            $this->saveOrderWithoutNotifications($order);
+            return $order;
+        }
         // 设置订单为待处理
         $order->status = Order::STATUS_PENDING;
         // 保存订单
-        $order->save();
-        // 商品库存减去
-        $this->goodsService->inStockDecr($order->goods_id, $order->buy_amount);
-        // 邮件数据
-        $mailData = [
-            'created_at' => $order->create_at,
-            'product_name' => $order->goods->gd_name,
-            'webname' => dujiaoka_config_get('text_logo', '独角数卡'),
-            'weburl' => config('app.url') ?? 'http://dujiaoka.com',
-            'ord_info' => str_replace(PHP_EOL, '<br/>', $order->info),
-            'ord_title' => $order->title,
-            'order_id' => $order->order_sn,
-            'buy_amount' => $order->buy_amount,
-            'ord_price' => $order->actual_price,
-            'created_at' => $order->created_at,
-        ];
-        $tpl = $this->emailtplService->detailByToken('manual_send_manage_mail');
-        $mailBody = replace_mail_tpl($tpl, $mailData);
-        $manageMail = dujiaoka_config_get('manage_email', '');
-        // 邮件发送
-        MailSend::dispatch($manageMail, $mailBody['tpl_name'], $mailBody['tpl_content']);
+        $this->saveOrderWithoutNotifications($order);
         return $order;
     }
 
@@ -494,32 +527,16 @@ class OrderProcessService
         if (count($carmis) != $order->buy_amount) {
             $order->info = __('dujiaoka.prompt.order_carmis_insufficient_quantity_available');
             $order->status = Order::STATUS_ABNORMAL;
-            $order->save();
+            $this->saveOrderWithoutNotifications($order);
             return $order;
         }
         $carmisInfo = array_column($carmis, 'carmi');
         $ids = array_column($carmis, 'id');
         $order->info = implode(PHP_EOL, $carmisInfo);
         $order->status = Order::STATUS_COMPLETED;
-        $order->save();
+        $this->saveOrderWithoutNotifications($order);
         // 将卡密设置为已售出
         $this->carmisService->soldByIDS($ids);
-        // 邮件数据
-        $mailData = [
-            'created_at' => $order->create_at,
-            'product_name' => $order->goods->gd_name,
-            'webname' => dujiaoka_config_get('text_logo', '独角数卡'),
-            'weburl' => config('app.url') ?? 'http://dujiaoka.com',
-            'ord_info' => implode('<br/>', $carmisInfo),
-            'ord_title' => $order->title,
-            'order_id' => $order->order_sn,
-            'buy_amount' => $order->buy_amount,
-            'ord_price' => $order->actual_price,
-        ];
-        $tpl = $this->emailtplService->detailByToken('card_send_user_email');
-        $mailBody = replace_mail_tpl($tpl, $mailData);
-        // 邮件发送
-        MailSend::dispatch($order->email, $mailBody['tpl_name'], $mailBody['tpl_content']);
         return $order;
     }
 
