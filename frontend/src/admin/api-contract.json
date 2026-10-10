@@ -1,0 +1,123 @@
+{
+  "sections": [
+    "overview",
+    "stripe",
+    "paypal",
+    "notifications",
+    "quotes",
+    "runtime"
+  ],
+  "page": "/admin/operations/{section}",
+  "data": "/admin/operations/{section}/data",
+  "action": "/admin/operations/{section}/action",
+  "config": {
+    "section": "string",
+    "userName": "string",
+    "csrf": "string",
+    "endpoints": {
+      "data": "url",
+      "action": "url"
+    },
+    "navigation": [
+      {
+        "key": "section",
+        "label": "zh label",
+        "href": "url"
+      }
+    ],
+    "management": [
+      {
+        "key": "resource",
+        "label": "zh label",
+        "href": "url"
+      }
+    ],
+    "canOperate": "boolean"
+  },
+  "dataResponse": {
+    "section": "string",
+    "module": {
+      "installed": "boolean",
+      "enabled": "boolean",
+      "message": "string"
+    },
+    "cards": [
+      {
+        "key": "string",
+        "label": "string",
+        "value": "number|string",
+        "hint": "string",
+        "tone": "neutral|good|warn"
+      }
+    ],
+    "columns": [
+      {
+        "key": "string",
+        "label": "string",
+        "format": "text|money|status|time|number"
+      }
+    ],
+    "rows": [
+      {
+        "id": 1,
+        "order_sn": "optional",
+        "status": "normalized pending|failed|completed|reserved|manual|expired|open|closed",
+        "actions": [
+          {
+            "key": "retry|retry-event|retry-job",
+            "label": "label",
+            "enabled": true
+          }
+        ]
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "per_page": 20,
+      "total": 0,
+      "last_page": 1
+    },
+    "bulkActions": [
+      {
+        "key": "reconcile|publish|expire",
+        "label": "string",
+        "enabled": "boolean"
+      }
+    ],
+    "features": [
+      {
+        "key": "feature",
+        "label": "string",
+        "enabled": "boolean",
+        "installed": "boolean"
+      }
+    ],
+    "runtime": [
+      {
+        "label": "string",
+        "value": "string",
+        "hint": "optional"
+      }
+    ]
+  },
+  "queries": {
+    "search": "orderSN or providerID whitelist string",
+    "state": "all|pending|failed|completed|reserved|manual|expired|open|closed",
+    "page": "positiveint",
+    "per_page": "1..50"
+  },
+  "actionBody": {
+    "action": "whitelistedaction",
+    "id": "optional positiveint"
+  },
+  "actionResponse": {
+    "message": "string",
+    "result": "small summary object"
+  },
+  "notes": [
+    "Blade embeds escaped JSON #admin-workbench-config and DOM #admin-workbench. HomeController /admin shows same overview Vue. Endpoint URLs use admin_url exact currentprefix/domain.",
+    "Backendread guarded GET section+API, action POSTsection+CSRF+granularpermission. ExplicitOperationPermission; disabled/missing modules returnemptyrows anddisabledactions, noexternalIOonGET.",
+    "Only allowlisted columns include providerids not private secrets/cardinfo/buyerpassword/payload/lease/autologexception. Errorcategory maps predefined codes never merchantbody.",
+    "Runtime queue failedrows omit payload/exception; actual QueueRetryCommand only one knownownedfailedjob integer/UUID identifier. If notimplemented exposecounts+jobs read-only with actionstatefalse."
+  ]
+}

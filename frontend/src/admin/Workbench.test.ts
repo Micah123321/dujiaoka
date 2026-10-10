@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import contract from './api-contract.json';
 import Workbench from './Workbench.vue';
 import { REQUEST_TIMEOUT, parseConfig, parseData } from './api';
 import { pageMeta, publicColumns } from './presentation';
@@ -16,7 +15,6 @@ afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()); docu
 
 describe('admin API contract and business pages', () => {
   it('matches the fixed API sections and data keys without forwarding metadata', () => {
-    const contract = JSON.parse(readFileSync(resolve(process.cwd(), '../tests/.runtime/admin56/api-contract.json'), 'utf8'));
     expect(sections).toEqual(contract.sections);
     expect(Object.keys(fixtureData()).sort()).toEqual(Object.keys(contract.dataResponse).sort());
     const raw = { ...fixtureData(), columns: [{ key: 'payload', label: 'private', format: 'text' }, ...fixtureData().columns], rows: [{ ...fixtureData().rows[0], payload: 'PRIVATE-PAYLOAD', metadata: { secret: 'PRIVATE-METADATA' } }] };
