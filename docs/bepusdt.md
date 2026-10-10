@@ -1,10 +1,18 @@
 # BEpusdt 支付
 
-使用 BEpusdt 原生 create-transaction 接口，复用商城订单与发货流程，无需新增依赖或数据库迁移。原 Epusdt 通道保持独立。
+使用 BEpusdt 原生 create-transaction 接口，复用商城订单与发货流程，无需新增依赖。原 Epusdt 通道保持独立。
 
 ## 后台配置
 
-在「支付通道」新增一条记录：
+在「支付渠道」找到默认关闭的 `BEpusdt[USDT-TRC20]` 模板，编辑对接令牌和服务地址后启用。新安装会自动导入此模板；已有站点执行 `php artisan migrate --force` 后补齐，迁移保留已配置或已删除的同标识渠道，重复执行不会新增重复记录。
+
+Docker Compose 部署使用：
+
+```sh
+docker compose --env-file .env.compose exec --user application web php artisan migrate --force
+```
+
+若需其他币种或网络，也可以按以下字段新增记录：
 
 | 字段 | 填写内容 |
 | --- | --- |

@@ -496,6 +496,8 @@ INSERT INTO `pays` VALUES (32,'MATIC', 'tokenpay-matic', 1, 3, 'EVM_Polygon_MATI
 INSERT INTO `pays` VALUES (33,'USDT-Polygon', 'tokenpay-usdt-polygon', 1, 3, 'EVM_Polygon_USDT_ERC20', '你的API密钥', 'https://token-pay.xxx.com', 'pay/tokenpay', 1, now(), now(), NULL);
 INSERT INTO `pays` VALUES (34,'USDC-Polygon', 'tokenpay-usdc-polygon', 1, 3, 'EVM_Polygon_USDC_ERC20', '你的API密钥', 'https://token-pay.xxx.com', 'pay/tokenpay', 1, now(), now(), NULL);
 
+INSERT INTO `pays` VALUES (35,'BEpusdt[USDT-TRC20]', 'usdt.trc20', 1, 3, 'BEpusdt API Token', '', 'https://pay.example.com', 'pay/bepusdt', 0, now(), now(), NULL);
+
 -- ----------------------------
 COMMIT;
 
