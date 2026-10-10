@@ -37,7 +37,10 @@ response=$(curl --fail --silent --show-error --cookie "$tmp/cookies" \
     --data-urlencode "db_password=$DB_PASSWORD" \
     --data-urlencode redis_host=redis --data-urlencode redis_port=6379 \
     --data-urlencode redis_password=null "$url/do-install")
-test "$response" = success
+if [[ "$response" != success ]]; then
+    printf 'Installer failed: %s\n' "$response" >&2
+    exit 1
+fi
 docker compose exec -T --user application web php artisan migrate --force
 
 # Check persisted state without logging the generated application key.
