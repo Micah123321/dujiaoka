@@ -695,6 +695,7 @@ TkSuQmCC" />
         </p>
 
         <form method="post">
+            @csrf
             <div id="error" style="display:none"></div>
             <div id="success" style="display:none"></div>
             {{ csrf_field() }}
