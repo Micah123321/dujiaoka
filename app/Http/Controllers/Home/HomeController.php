@@ -133,6 +133,33 @@ class HomeController extends BaseController
     {
         try {
             $dbConfig = config('database');
+            if (config('dujiaoka.container_installation')) {
+                // Container environment overrides .env, so installation must use that same target.
+                $expected = [
+                    'db_host' => $dbConfig['connections']['mysql']['host'],
+                    'db_port' => $dbConfig['connections']['mysql']['port'],
+                    'db_database' => $dbConfig['connections']['mysql']['database'],
+                    'db_username' => $dbConfig['connections']['mysql']['username'],
+                    'db_password' => $dbConfig['connections']['mysql']['password'],
+                    'redis_host' => $dbConfig['redis']['default']['host'],
+                    'redis_port' => $dbConfig['redis']['default']['port'],
+                    'redis_password' => $dbConfig['redis']['default']['password'],
+                    'app_url' => config('app.url'),
+                ];
+                foreach ($expected as $field => $value) {
+                    $actual = $request->input($field);
+                    if ($field === 'redis_password') {
+                        $actual = in_array($actual, [null, '', 'null'], true) ? null : $actual;
+                    }
+                    if ($field === 'app_url') {
+                        $actual = rtrim((string) $actual, '/');
+                        $value = rtrim((string) $value, '/');
+                    }
+                    if ((string) $actual !== (string) $value) {
+                        return 'Docker 安装参数须与容器配置一致，请检查 .env.compose：' . $field;
+                    }
+                }
+            }
             $mysqlDB = [
                 'host' => $request->input('db_host'),
                 'port' => $request->input('db_port'),

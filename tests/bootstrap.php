@@ -5,6 +5,7 @@ $environment = [
     'APP_BASE_PATH' => dirname(__DIR__),
     'APP_ENV' => 'testing',
     'APP_DEBUG' => 'false',
+    'DUJIAOKA_CONTAINER' => 'false',
     'APP_KEY' => 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
     'APP_URL' => 'http://localhost',
     // Laravel 6 only recognizes slash-prefixed absolute paths; keep these relative on Windows.

@@ -695,28 +695,27 @@ TkSuQmCC" />
         </p>
 
         <form method="post">
-            @csrf
             <div id="error" style="display:none"></div>
             <div id="success" style="display:none"></div>
             {{ csrf_field() }}
             <div class="form-group">
                 <div class="form-field">
                     <label>MySQL 数据库地址</label>
-                    <input name="db_host" value="127.0.0.1" required="">
+                    <input name="db_host" value="{{ config('dujiaoka.container_installation') ? config('database.connections.mysql.host') : '127.0.0.1' }}" required="">
                 </div>
 
                 <div class="form-field">
                     <label>MySQL 端口</label>
-                    <input name="db_port" value="3306" required="">
+                    <input name="db_port" value="{{ config('dujiaoka.container_installation') ? config('database.connections.mysql.port') : '3306' }}" required="">
                 </div>
                 <div class="form-field">
                     <label>MySQL 数据库名</label>
-                    <input name="db_database" value="dujiaoka" required="">
+                    <input name="db_database" value="{{ config('dujiaoka.container_installation') ? config('database.connections.mysql.database') : 'dujiaoka' }}" required="">
                 </div>
 
                 <div class="form-field">
                     <label>MySQL 用户名</label>
-                    <input name="db_username" value="root" required="">
+                    <input name="db_username" value="{{ config('dujiaoka.container_installation') ? config('database.connections.mysql.username') : 'root' }}" required="">
                 </div>
 
                 <div class="form-field">
@@ -728,7 +727,7 @@ TkSuQmCC" />
             <div class="form-group">
                 <div class="form-field">
                     <label>Redis 连接地址</label>
-                    <input name="redis_host" value="127.0.0.1" required="">
+                    <input name="redis_host" value="{{ config('dujiaoka.container_installation') ? config('database.redis.default.host') : '127.0.0.1' }}" required="">
                 </div>
 
                 <div class="form-field">
@@ -738,7 +737,7 @@ TkSuQmCC" />
 
                 <div class="form-field">
                     <label>Redis 端口</label>
-                    <input name="redis_port" value="6379" required="">
+                    <input name="redis_port" value="{{ config('dujiaoka.container_installation') ? config('database.redis.default.port') : '6379' }}" required="">
                 </div>
 
             </div>
@@ -751,7 +750,7 @@ TkSuQmCC" />
 
                 <div class="form-field">
                     <label>网站url</label>
-                    <input name="app_url" value="" required="" placeholder="例如：http://dujiaoka.com" />
+                    <input name="app_url" value="{{ config('dujiaoka.container_installation') ? config('app.url') : '' }}" required="" placeholder="例如：http://dujiaoka.com" />
                 </div>
 
 

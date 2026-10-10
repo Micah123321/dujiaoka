@@ -85,7 +85,7 @@ docker compose --env-file .env.compose up -d --no-build --wait
 ssh -N -L 8010:127.0.0.1:8010 YOUR_SSH_USER@YOUR_SERVER
 ```
 
-只对全新空库运行安装器。安装表单填写：
+只对全新空库运行安装器。容器模式会预填连接地址、数据库名称、用户名和站点 URL；密码仍需手动输入。提交时连接参数须与 `.env.compose` 一致，参数不匹配会在导入前提示。安装表单填写：
 
 | 字段 | 值 |
 | --- | --- |

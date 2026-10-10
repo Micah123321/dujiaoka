@@ -9,6 +9,7 @@
 
 return [
     'dujiaoka_version' => '2.0.6',
+    'container_installation' => (bool) env('DUJIAOKA_CONTAINER', false),
     // Presentation only; zero disables caching. Purchase validation stays live.
     'catalog_cache_seconds' => (int) env('CATALOG_CACHE_SECONDS', 10),
     // Cache successful quotes by provider; zero fetches every time.
