@@ -3,6 +3,8 @@ services:
   web:
     build: .
     container_name: dujiaoka
+    stop_signal: SIGTERM
+    stop_grace_period: 120s
     ports:
       - "8010:80"
       - "9010:9010"

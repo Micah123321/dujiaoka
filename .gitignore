@@ -1,4 +1,7 @@
 /node_modules
+/frontend/node_modules
+/frontend/test-results
+/frontend/playwright-report
 /public/hot
 /public/storage
 /public/uploads
@@ -7,6 +10,12 @@
 .env
 .env.backup
 .phpunit.result.cache
+/tests/.runtime/
+/tests/Compatibility/Laravel12/vendor/
+/tests/Compatibility/Laravel6/vendor/
+/%SystemDrive%/
+__pycache__/
+*.py[cod]
 Homestead.json
 Homestead.yaml
 npm-debug.log
