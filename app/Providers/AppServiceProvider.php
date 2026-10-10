@@ -21,6 +21,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
+        $this->app->singleton(\App\Service\ExchangeRateService::class, function ($app) {
+            $rates = new \App\Payments\CurrencyRateClient($app->make(\GuzzleHttp\Client::class));
+            return new \App\Service\ExchangeRateService($rates, $app->make('cache.store'));
+        });
         $this->app->singleton('Service\GoodsService', function () {
             return $this->app->make(GoodsService::class);
         });
@@ -55,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-
+        // Preserve Dcat's upload implementation while declaring its request properties.
+        $this->app->singleton('admin.web-uploader', \App\Admin\Support\WebUploader::class);
     }
 }

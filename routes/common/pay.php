@@ -33,6 +33,9 @@ Route::group(['prefix' => 'pay', 'namespace' => 'Pay', 'middleware' => ['dujiaok
     Route::get('yipay/notify_url', 'YipayController@notifyUrl');
     Route::get('yipay/return_url', 'YipayController@returnUrl')->name('yipay-return');
     // paypal
+    Route::post('paypal/webhook/{gateway}', 'PaypalWebhookController@receive')->name('paypal-webhook');
+    Route::get('paypal/v2/return', 'PaypalOrdersController@returnUrl')->name('paypal-v2-return');
+    Route::get('paypal/v2/cancel', 'PaypalOrdersController@cancelUrl')->name('paypal-v2-cancel');
     Route::get('paypal/{payway}/{orderSN}', 'PaypalPayController@gateway');
     Route::get('paypal/return_url', 'PaypalPayController@returnUrl')->name('paypal-return');
     Route::any('paypal/notify_url', 'PaypalPayController@notifyUrl');
@@ -40,6 +43,14 @@ Route::group(['prefix' => 'pay', 'namespace' => 'Pay', 'middleware' => ['dujiaok
     Route::get('vpay/{payway}/{orderSN}', 'VpayController@gateway');
     Route::get('vpay/notify_url', 'VpayController@notifyUrl');
     Route::get('vpay/return_url', 'VpayController@returnUrl')->name('vpay-return');
+    // Customer-side intent operations require CSRF even though callbacks do not.
+    Route::post('stripe/intent', 'StripeIntentController@begin')->name('stripe-intent-begin')
+        ->middleware(\App\Http\Middleware\VerifyPaymentCsrfToken::class);
+    Route::post('stripe/intent/status', 'StripeIntentController@status')->name('stripe-intent-status')
+        ->middleware(\App\Http\Middleware\VerifyPaymentCsrfToken::class);
+    Route::get('stripe/intent-return', 'StripeIntentController@returnUrl')->name('stripe-intent-return');
+    // Stripe authenticates this provider callback with its signed raw body.
+    Route::post('stripe/webhook/{gateway}', 'StripeWebhookController@receive')->name('stripe-webhook');
     // stripe
     Route::get('stripe/{payway}/{oid}','StripeController@gateway');
     Route::get('stripe/return_url','StripeController@returnUrl');
@@ -52,6 +63,10 @@ Route::group(['prefix' => 'pay', 'namespace' => 'Pay', 'middleware' => ['dujiaok
     Route::get('epusdt/{payway}/{orderSN}', 'EpusdtController@gateway');
     Route::post('epusdt/notify_url', 'EpusdtController@notifyUrl');
     Route::get('epusdt/return_url', 'EpusdtController@returnUrl')->name('epusdt-return');
+    // BEpusdt
+    Route::get('bepusdt/{payway}/{orderSN}', 'BepusdtController@gateway');
+    Route::post('bepusdt/notify_url', 'BepusdtController@notifyUrl');
+    Route::get('bepusdt/return_url', 'BepusdtController@returnUrl')->name('bepusdt-return');
     // tokenpay
     Route::get('tokenpay/{payway}/{orderSN}', 'TokenPayController@gateway');
     Route::post('tokenpay/notify_url', 'TokenPayController@notifyUrl');
