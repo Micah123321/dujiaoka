@@ -32,6 +32,7 @@ class EmailtplController extends AdminController
                 $filter->equal('id');
                 $filter->like('tpl_name');
                 $filter->like('tpl_token');
+                $filter->scope(admin_trans('dujiaoka.trashed'))->onlyTrashed();
             });
             $grid->actions(function (Grid\Displayers\Actions $actions) {
                 if (request('_scope_') == admin_trans('dujiaoka.trashed')) {

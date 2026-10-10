@@ -1,10 +1,13 @@
 <style>
     .dashboard-title .links {
-        text-align: center;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px 24px;
         margin-bottom: 2.5rem;
     }
     .dashboard-title .links > a {
-        padding: 0 25px;
+        white-space: nowrap;
         font-size: 12px;
         font-weight: 600;
         letter-spacing: .1rem;
@@ -34,7 +37,7 @@
                 <div class="links">
                     <a href="https://github.com/assimon/dujiaoka" target="_blank">Github</a>
                     <a href="//shang.qq.com/wpa/qunwpa?idkey=37b6b06f7c941dae20dcd5784088905d6461064d7f33478692f0c4215546cee0" id="qq-group-link" target="_blank">
-                        <img border="0" src="//pub.idqqimg.com/wpa/images/group.png" alt="" title="{{ __('dujiaoka.join_qq_group') }}">
+                        {{ __('dujiaoka.join_qq_group') }}
                     </a>
                     <a href="http://t.me/dujiaoka" id="telegram-group-link" target="_blank">{{ __('dujiaoka.join_telegram_group') }}</a>
                     <a href="https://dujiaoka.com" id="demo-link" target="_blank">{{ __('dujiaoka.official_website') }}</a>

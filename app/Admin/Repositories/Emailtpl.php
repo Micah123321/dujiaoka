@@ -3,9 +3,8 @@
 namespace App\Admin\Repositories;
 
 use App\Models\Emailtpl as Model;
-use Dcat\Admin\Repositories\EloquentRepository;
 
-class Emailtpl extends EloquentRepository
+class Emailtpl extends TransactionalRepository
 {
     /**
      * Model.

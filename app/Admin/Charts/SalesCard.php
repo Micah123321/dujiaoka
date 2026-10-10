@@ -113,7 +113,7 @@ class SalesCard extends Bar
      *
      * @return $this
      */
-    public function withContent($title, $value, $style = 'success', $startTime, $endTime)
+    public function withContent($title, $value, $style, $startTime, $endTime)
     {
         $minHeight = '183px';
         $uri = admin_route('order.index', [

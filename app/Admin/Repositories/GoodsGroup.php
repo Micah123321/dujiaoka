@@ -3,9 +3,8 @@
 namespace App\Admin\Repositories;
 
 use App\Models\GoodsGroup as Model;
-use Dcat\Admin\Repositories\EloquentRepository;
 
-class GoodsGroup extends EloquentRepository
+class GoodsGroup extends TransactionalRepository
 {
 
     /**

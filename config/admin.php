@@ -63,7 +63,7 @@ return [
 
         'namespace' => 'App\\Admin\\Controllers',
 
-        'middleware' => ['web', 'admin'],
+        'middleware' => ['web', App\Admin\Middleware\ResourcePermission::class, 'admin'],
 
         'enable_session_middleware' => false,
     ],
@@ -174,7 +174,7 @@ return [
             'edit' => Dcat\Admin\Grid\Actions\Edit::class,
             'quick_edit' => Dcat\Admin\Grid\Actions\QuickEdit::class,
             'delete' => Dcat\Admin\Grid\Actions\Delete::class,
-            'batch_delete' => Dcat\Admin\Grid\Tools\BatchDelete::class,
+            'batch_delete' => App\Admin\Actions\BatchDelete::class,
         ],
 
         // The global Grid column selector setting.

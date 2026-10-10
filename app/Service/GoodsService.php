@@ -39,6 +39,30 @@ class GoodsService
      */
     public function withGroup(): ?array
     {
+        $seconds = max(0, min(60, (int) config('dujiaoka.catalog_cache_seconds', 10)));
+        if ($seconds === 0 || \Illuminate\Support\Facades\DB::transactionLevel() > 0) {
+            return $this->loadCatalog();
+        }
+        $key = 'storefront:catalog:v1:' . app()->getLocale();
+        try {
+            $cached = \Illuminate\Support\Facades\Cache::get($key);
+            if (is_array($cached)) {
+                return $cached;
+            }
+        } catch (\Throwable $exception) {
+            // A cache outage must not hide an otherwise available catalog.
+        }
+        $catalog = $this->loadCatalog();
+        try {
+            \Illuminate\Support\Facades\Cache::put($key, $catalog, $seconds);
+        } catch (\Throwable $exception) {
+            // Database results remain usable if the cache backend is unavailable.
+        }
+        return $catalog;
+    }
+
+    private function loadCatalog(): array
+    {
         $goods = GoodsGroup::query()
             ->with(['goods' => function($query) {
                 $query->withCount(['carmis' => function($query) {
@@ -48,8 +72,7 @@ class GoodsService
             ->where('is_open', GoodsGroup::STATUS_OPEN)
             ->orderBy('ord', 'DESC')
             ->get();
-        // 将自动
-        return $goods ? $goods->toArray() : null;
+        return $goods->toArray();
     }
 
     /**
@@ -130,7 +153,8 @@ class GoodsService
      */
     public function inStockDecr(int $id, int $number = 1): bool
     {
-        return Goods::query()->where('id', $id)->decrement('in_stock', $number);
+        return $number > 0 && Goods::query()->where('id', $id)
+            ->where('in_stock', '>=', $number)->decrement('in_stock', $number);
     }
 
     /**

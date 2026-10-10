@@ -27,6 +27,6 @@ class GoodsDeleted
      */
     public function handle(GoodsDeletedEvent $event)
     {
-        Carmis::query()->where('goods_id', $event->goods->id)->delete();
+        Carmis::on($event->goods->getConnectionName())->where('goods_id', $event->goods->id)->delete();
     }
 }

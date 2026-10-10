@@ -58,8 +58,10 @@ class CouponService
     public function retDecr(string $coupon)
     {
         return Coupon::query()
-            ->where('coupon',  $coupon)
-            ->decrement('ret', 1);
+            ->where('coupon', $coupon)
+            ->where('is_open', Coupon::STATUS_OPEN)
+            ->where('ret', '>', 0)
+            ->decrement('ret', 1, ['is_use' => Coupon::STATUS_USE]);
     }
 
     /**

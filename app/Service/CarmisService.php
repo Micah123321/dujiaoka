@@ -31,6 +31,8 @@ class CarmisService
         $carmis = Carmis::query()
             ->where('goods_id', $goodsID)
             ->where('status', Carmis::STATUS_UNSOLD)
+            ->orderBy('id')
+            ->lockForUpdate()
             ->take($byAmount)
             ->get();
         return $carmis ? $carmis->toArray() : null;
@@ -48,7 +50,7 @@ class CarmisService
      */
     public function soldByIDS(array $ids): bool
     {
-        return Carmis::query()->whereIn('id', $ids)->where('is_loop', 0)->update(['status' => Carmis::STATUS_SOLD]);
+        return Carmis::query()->whereIn('id', $ids)->where('is_loop', 0)->where('status', Carmis::STATUS_UNSOLD)->update(['status' => Carmis::STATUS_SOLD]);
     }
 
 }

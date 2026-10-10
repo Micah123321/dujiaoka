@@ -30,7 +30,7 @@ class ImportCarmis extends Form
             $carmisContent = $input['carmis_list'];
         }
         $carmisData = [];
-        $tempList = explode(PHP_EOL, $carmisContent);
+        $tempList = preg_split('/\r\n|\n|\r/', $carmisContent);
         foreach ($tempList as $val) {
             if (trim($val) != "") {
                 $carmisData[] = [
@@ -47,11 +47,13 @@ class ImportCarmis extends Form
         }
         Carmis::query()->insert($carmisData);
         // 删除文件
-        Storage::disk('public')->delete($input['carmis_txt']);
+        if (!empty($input['carmis_txt'])) {
+            Storage::disk('public')->delete($input['carmis_txt']);
+        }
         return $this
 				->response()
 				->success(admin_trans('carmis.rule_messages.import_carmis_success'))
-				->location('/carmis');
+				->location(admin_url('carmis'));
     }
 
     /**

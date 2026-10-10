@@ -10,6 +10,7 @@
 namespace App\Admin\Actions\Post;
 
 
+use App\Admin\Middleware\ResourcePermission;
 use Dcat\Admin\Grid\BatchAction;
 use Illuminate\Http\Request;
 
@@ -21,7 +22,7 @@ class BatchRestore extends BatchAction
     protected $model;
 
     // 注意构造方法的参数必须要有默认值
-    public function __construct(string $model = null)
+    public function __construct(?string $model = null)
     {
         $this->title = admin_trans('dujiaoka.restore');
         $this->model = $model;
@@ -29,13 +30,31 @@ class BatchRestore extends BatchAction
 
     public function handle(Request $request)
     {
-        $model = $request->get('model');
+        $keys = (array) $this->getKey();
+        $model = ResourcePermission::authorizeRestore($request->get('model'), $keys);
 
-        foreach ((array) $this->getKey() as $key) {
-            $model::withTrashed()->findOrFail($key)->restore();
-        }
+        (new $model())->getConnection()->transaction(function () use ($model, $keys) {
+            $records = [];
+            foreach ($keys as $key) {
+                $records[] = $model::onlyTrashed()->lockForUpdate()->findOrFail($key);
+            }
+            foreach ($records as $record) {
+                $record->restore();
+            }
+        });
 
         return $this->response()->success(admin_trans('dujiaoka.restored'))->refresh();
+    }
+
+    protected function authorize($user): bool
+    {
+        $model = $this->model !== null ? $this->model : request()->get('model');
+        return ResourcePermission::canRestore($user, $model, (array) $this->getKey(), $this->model !== null);
+    }
+
+    public function allowed()
+    {
+        return parent::allowed() && $this->passesAuthorization();
     }
 
     public function confirm()

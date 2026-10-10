@@ -27,6 +27,6 @@ class GoodsGroupDeleted
      */
     public function handle(GoodsGroupDeletedEvent $event)
     {
-        Goods::query()->where('group_id', $event->goodsGroup->id)->delete();
+        Goods::on($event->goodsGroup->getConnectionName())->where('group_id', $event->goodsGroup->id)->delete();
     }
 }
