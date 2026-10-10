@@ -1,22 +1,81 @@
-version: "2.2"
 services:
   web:
-    build: .
-    container_name: dujiaoka
+    image: ${DUJIAOKA_IMAGE:-ghcr.io/micah123321/dujiaoka:latest}
+    platform: linux/amd64
+    build:
+      context: .
     stop_signal: SIGTERM
     stop_grace_period: 120s
     ports:
-      - "8010:80"
-      - "9010:9010"
-    volumes:
-      # 增加此行，则将环境信息进行复制到容器，请确保你存在该文件
-      - /root/dujiaoka/.env:/app/.env
-      # 增加此行，避免每次重新创建容器都需要初始化
-      - /root/dujiaoka/install.lock:/app/install.lock
-      # 增加此行，确保将上传的资源映射出来，避免容器重新创建后图片不在了
-      - /root/dujiaoka/public/uploads:/app/public/uploads
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8010}:80"
     environment:
-      WEB_DOCUMENT_ROOT: "/app/public"
+      WEB_DOCUMENT_ROOT: /app/public
       TZ: Asia/Shanghai
-    tty: true
-    restart: always
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-http://localhost:8010}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-dujiaoka}
+      DB_USERNAME: ${DB_USERNAME:-dujiaoka}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env.compose}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: file
+      ADMIN_HTTPS: ${ADMIN_HTTPS:-false}
+    volumes:
+      - app_data:/data
+      - app_storage:/app/storage
+      - app_uploads:/app/public/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, "curl --fail --silent --output /dev/null http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_DATABASE: ${DB_DATABASE:-dujiaoka}
+      MYSQL_USER: ${DB_USERNAME:-dujiaoka}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env.compose}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env.compose}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysql --user=root --silent --execute="SELECT 1"']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: [redis-server, --appendonly, "yes", --appendfsync, everysec]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  app_data:
+  app_storage:
+  app_uploads:
+  mysql_data:
+  redis_data:

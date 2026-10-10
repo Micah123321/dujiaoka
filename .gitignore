@@ -9,6 +9,12 @@
 /vendor
 .env
 .env.backup
+.env.compose
+/runtime.env.edit
+/backups/
+/migration/
+/old-shop.sql
+/old-uploads.tar.gz
 .phpunit.result.cache
 /tests/.runtime/
 /tests/Compatibility/Laravel12/vendor/

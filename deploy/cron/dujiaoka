@@ -1,3 +1,3 @@
 SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-* * * * * application cd /app && php artisan schedule:run --no-interaction >> /app/storage/logs/scheduler.log 2>&1
+* * * * * application test -f /app/install.lock && cd /app && php artisan schedule:run --no-interaction >> /app/storage/logs/scheduler.log 2>&1

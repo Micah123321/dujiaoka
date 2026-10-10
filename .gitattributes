@@ -3,3 +3,10 @@
 *.scss linguist-vendored
 *.js linguist-vendored
 CHANGELOG.md export-ignore
+
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.conf text eol=lf
+Dockerfile text eol=lf
+deploy/cron/dujiaoka text eol=lf

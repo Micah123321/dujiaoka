@@ -1,5 +1,13 @@
 .git
 .helloagents
+.github
+docs
+public/assets/modern
+runtime.env.edit
+backups
+migration
+old-shop.sql
+old-uploads.tar.gz
 .env
 .env.*
 !.env.example
