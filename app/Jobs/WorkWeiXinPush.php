@@ -34,10 +34,7 @@ class WorkWeiXinPush implements ShouldQueue
      */
     private $order;
 
-    /**
-     * 商品服务层.
-     * @var \App\Service\PayService
-     */
+    /** Kept for compatibility with previously serialized jobs. */
     private $goodsService;
 
 
@@ -49,7 +46,6 @@ class WorkWeiXinPush implements ShouldQueue
     public function __construct(Order $order)
     {
         $this->order = $order;
-        $this->goodsService = app('Service\GoodsService');
     }
 
     /**
@@ -59,8 +55,8 @@ class WorkWeiXinPush implements ShouldQueue
      */
     public function handle()
     {
-        $goodInfo = $this->goodsService->detail($this->order->goods_id);
-        $client = new Client();
+        $goodInfo = app('Service\GoodsService')->detail($this->order->goods_id);
+        $client = app(Client::class);
         $apiUrl = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key='. dujiaoka_config_get('qywxbot_key');
 		$params = [
 			"msgtype"=>"markdown",
@@ -77,6 +73,27 @@ class WorkWeiXinPush implements ShouldQueue
 				.'>'.__('order.fields.order_created') .': <font color="comment">'.$this->order->created_at."</font>"
 			]
 		];
-        $client->post($apiUrl,['json' => $params, 'verify' => false]);
+        try {
+            $response = $client->post($apiUrl, [
+                'json' => $params,
+                'verify' => true,
+                'connect_timeout' => 5,
+                'timeout' => 15,
+                'allow_redirects' => false,
+                'http_errors' => false,
+            ]);
+        } catch (\GuzzleHttp\Exception\GuzzleException $exception) {
+            // Transport exceptions contain the token-bearing URL.
+            throw new \RuntimeException('Enterprise WeChat notification request failed');
+        }
+
+        $status = $response->getStatusCode();
+        if ($status < 200 || $status >= 300) {
+            throw new \RuntimeException('Enterprise WeChat notification returned HTTP ' . $status);
+        }
+        $result = json_decode((string) $response->getBody(), true);
+        if (!is_array($result) || !in_array($result['errcode'] ?? null, [0, '0'], true)) {
+            throw new \RuntimeException('Enterprise WeChat notification returned an unsuccessful acknowledgment');
+        }
     }
 }

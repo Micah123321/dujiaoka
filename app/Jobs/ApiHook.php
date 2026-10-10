@@ -27,10 +27,14 @@ class ApiHook implements ShouldQueue
      */
     public $timeout = 30;
 
+    public $retryAfter = 30;
+
     /**
      * @var Order
      */
     private $order;
+
+    private $requireHook = false;
 
     /**
      * 商品服务层.
@@ -44,10 +48,16 @@ class ApiHook implements ShouldQueue
      *
      * @return void
      */
-    public function __construct(Order $order)
+    public function __construct(Order $order, bool $requireHook = false)
     {
         $this->order = $order;
-        $this->goodsService = app('Service\GoodsService');
+        $this->requireHook = $requireHook;
+    }
+
+    public function backoff(): int
+    {
+        // Keep one delay source for Laravel 6 retryAfter and modern queue payloads.
+        return $this->retryAfter;
     }
 
     /**
@@ -57,9 +67,12 @@ class ApiHook implements ShouldQueue
      */
     public function handle()
     {
-        $goodInfo = $this->goodsService->detail($this->order->goods_id);
+        $goodInfo = app('Service\GoodsService')->detail($this->order->goods_id);
         // 判断是否有配置支付回调
-        if(empty($goodInfo->api_hook)){
+        if (empty($goodInfo->api_hook)) {
+            if ($this->requireHook) {
+                throw new \RuntimeException('Order webhook is no longer configured.');
+            }
             return;
         }
         $postdata = [
@@ -74,14 +87,16 @@ class ApiHook implements ShouldQueue
         ];
 
         
-        $opts = [
-            'http' => [
-                'method'  => 'POST',
-                'header'  => 'Content-type: application/json',
-                'content' => json_encode($postdata,JSON_UNESCAPED_UNICODE)
-            ]
-        ];
-        $context  = stream_context_create($opts);
-        file_get_contents($goodInfo->api_hook, false, $context);
+        $response = app(\GuzzleHttp\Client::class)->request('POST', $goodInfo->api_hook, [
+            'json' => $postdata,
+            'connect_timeout' => 5,
+            'timeout' => 15,
+            'allow_redirects' => false,
+            'http_errors' => false,
+        ]);
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
+            // Do not include URLs or response bodies: they may contain credentials.
+            throw new \RuntimeException('Order webhook returned HTTP ' . $response->getStatusCode());
+        }
     }
 }

@@ -16,6 +16,11 @@ class OrderUpdated
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $order;
+    public $statusTransition;
+    public $eventKey;
+    public $snapshot;
+    public $orderId;
+    public $connectionName;
 
     /**
      * Create a new event instance.
@@ -25,6 +30,17 @@ class OrderUpdated
     public function __construct(Order $order)
     {
         $this->order = $order;
+        if (config('dujiaoka.manual_status_mail_outbox', false)) {
+            $capture = $order->captureStatusMailTransition();
+            if ($capture !== null) {
+                $stored = $capture['order'];
+                $this->statusTransition = $capture['transition'];
+                $this->eventKey = $capture['key'];
+                $this->snapshot = app(\App\Service\PaymentMailService::class)->statusRecipe($stored);
+                $this->orderId = (int) $stored->getKey();
+                $this->connectionName = $stored->getConnection()->getName();
+            }
+        }
     }
 
     /**

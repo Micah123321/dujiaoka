@@ -35,10 +35,7 @@ class BarkPush implements ShouldQueue
      */
     private $order;
 
-    /**
-     * 商品服务层.
-     * @var \App\Service\PayService
-     */
+    /** Kept for compatibility with previously serialized jobs. */
     private $goodsService;
 
 
@@ -50,7 +47,6 @@ class BarkPush implements ShouldQueue
     public function __construct(Order $order)
     {
         $this->order = $order;
-        $this->goodsService = app('Service\GoodsService');
     }
 
     /**
@@ -60,8 +56,8 @@ class BarkPush implements ShouldQueue
      */
     public function handle()
     {
-        $goodInfo = $this->goodsService->detail($this->order->goods_id);
-        $client = new Client();
+        $goodInfo = app('Service\GoodsService')->detail($this->order->goods_id);
+        $client = app(Client::class);
         $apiUrl = dujiaoka_config_get('bark_server') .'/'. dujiaoka_config_get('bark_token');
 		$params = [
 			"title" => __('dujiaoka.prompt.new_order_push').'('.$this->order->actual_price.'元)',
@@ -81,6 +77,27 @@ class BarkPush implements ShouldQueue
 		if (dujiaoka_config_get('is_open_bark_push_url', 0) == BaseModel::STATUS_OPEN) {
 			$params["url"] = url('detail-order-sn/'.$this->order->order_sn);
 		}
-        $client->post($apiUrl,['form_params' => $params, 'verify' => false]);
+        try {
+            $response = $client->post($apiUrl, [
+                'form_params' => $params,
+                'verify' => true,
+                'connect_timeout' => 5,
+                'timeout' => 15,
+                'allow_redirects' => false,
+                'http_errors' => false,
+            ]);
+        } catch (\GuzzleHttp\Exception\GuzzleException $exception) {
+            // Transport exceptions contain the token-bearing URL.
+            throw new \RuntimeException('Bark notification request failed');
+        }
+
+        $status = $response->getStatusCode();
+        if ($status < 200 || $status >= 300) {
+            throw new \RuntimeException('Bark notification returned HTTP ' . $status);
+        }
+        $result = json_decode((string) $response->getBody(), true);
+        if (!is_array($result) || !in_array($result['code'] ?? null, [200, '200'], true)) {
+            throw new \RuntimeException('Bark notification returned an unsuccessful acknowledgment');
+        }
     }
 }

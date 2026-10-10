@@ -29,6 +29,10 @@ class OrderUpdated
      */
     public function handle(OrderUpdatedEvent $event)
     {
+        if (config('dujiaoka.manual_status_mail_outbox', false)) {
+            app(\App\Service\NotificationOutboxService::class)->recordOrderStatus($event);
+            return;
+        }
         $sysCache = cache('system-setting');
         // 当代充商品状态，将会对顾客进行订单内容推送
         $order = [
