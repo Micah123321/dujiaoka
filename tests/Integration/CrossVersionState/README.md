@@ -1,0 +1,15 @@
+# Cross-version file state acceptance
+
+This harness uses independent Windows PHP7.4.33/Laravel6.20.42 and PHP8.5.11/Laravel13.35.0 processes. The historical `root` label selects `tests/Compatibility/Laravel6/vendor`, including package discovery; `candidate` selects `tests/Compatibility/Laravel12/vendor`. Install legacy dependencies first with `composer install --working-dir=tests/Compatibility/Laravel6 --no-scripts --no-plugins` (use the complete PHP 8.5 fixture INI when Composer requires PHP 8+; the manifest fixes PHP 7.4.33). It validates state written by one framework and read/updated by the other, then read again by the original tree. It does not load either ordinary test bootstrap, change the real application key or access the shop environment.
+
+```powershell
+& tests/.runtime/php74/php.exe -c tests/.runtime/php74/php.ini tests/Integration/CrossVersionState/run.php
+```
+
+[The parent](run.php) creates two new marker-owned directories under tests/.runtime/cross-version-state, one per direction. The two dependency trees share only synthetic SQLite, business file cache/session storage and a synthetic stable application key/cookie name. Config/routes/packages/services/events and compiled views are private to each tree. [The child bootstrap](bootstrap.php) selects the explicit binary/INI/vendor, loads a missing environment file from this run and asserts the shared private paths before executing a task. Parent and child record actual versions/PIDs/exit codes; each task has a45-second deadline and the complete run a240-second deadline.
+
+[The child](worker.php) uses the installed framework APIs: Cache FileStore and original GoodsService for actual catalog arrays, original Dcat login page/credentials action, App HttpKernel with EncryptCookies/StartSession/VerifyCsrfToken, original admin grid/logout and SessionGuard remember recovery. Diagnostic web routes record actual guard identity/session/CSRF and write typed arrays plus a real ViewErrorBag. Every HTTP request runs in a new PHP process; these are Request::create/kernel executions, not network requests. The separate [native HTTP fixture](../../../docs/http-runtime-compatibility.md) supplies real FPM/Nginx evidence.
+
+The expected matrix covers both directions and the return path: exact PHP integer/string zero, bool/null/decimal-string/Unicode/nested-array values, unchanged cache bytes on a hit and zero catalog SQL; encrypted session cookie, original admin identity and stable CSRF/session ID; stored ViewErrorBag; wrong token419; valid token update read back; remember-only recovery; changed synthetic key/corrupt ciphertext invalidation; original logout accepted by the other runtime. No cookie encryption or cache/session serialization implementation is recreated in the harness.
+
+Fresh baseline directories and failed reports remain separate. Same key/cipher/cookie name and matching file storage are premises; compiled framework/config/route/view caches are regenerated per tree. Real deployment schemas, store settings/keys, Redis/database sessions, application key rotation, browser cookie policy and OCI are distinct acceptance scopes.

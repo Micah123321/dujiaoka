@@ -1,0 +1,7 @@
+# Test-only OpenSSL configuration for generated RSA fixtures on Windows.
+[req]
+distinguished_name = fixture_dn
+prompt = no
+
+[fixture_dn]
+CN = alipay-unit-fixture.invalid

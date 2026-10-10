@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="./vendor/phpunit/phpunit/phpunit.xsd"
-         bootstrap="vendor/autoload.php"
-         colors="true">
+         bootstrap="tests/bootstrap.php"
+         colors="true" recordTestRunHistory="false"
+         failOnAllIssues="true" displayDetailsOnAllIssues="true" failOnEmptyTestSuite="true">
     <testsuites>
         <testsuite name="Unit">
             <directory suffix="Test.php">./tests/Unit</directory>
@@ -11,12 +12,21 @@
         <testsuite name="Feature">
             <directory suffix="Test.php">./tests/Feature</directory>
         </testsuite>
+        <testsuite name="Modern SMTP protocol">
+            <file>tests/Compatibility/Laravel12/SmtpProtocolTest.php</file>
+        </testsuite>
+        <testsuite name="Modern spreadsheet protocol">
+            <file>tests/Compatibility/Laravel12/SpreadsheetCompatibilityTest.php</file>
+        </testsuite>
+        <testsuite name="Maintained runtime boundaries">
+            <file>tests/Compatibility/Laravel12/RuntimeBoundaryCompatibilityTest.php</file>
+        </testsuite>
     </testsuites>
-    <filter>
-        <whitelist processUncoveredFilesFromWhitelist="true">
+    <source>
+        <include>
             <directory suffix=".php">./app</directory>
-        </whitelist>
-    </filter>
+        </include>
+    </source>
     <php>
         <server name="APP_ENV" value="testing"/>
         <server name="BCRYPT_ROUNDS" value="4"/>

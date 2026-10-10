@@ -1,0 +1,51 @@
+{
+    "name": "dujiaoka/framework-compatibility-runtime",
+    "type": "project",
+    "description": "Isolated Laravel 13 compatibility runtime; the root Laravel 6 dependency tree is retained.",
+    "keywords": [
+        "framework",
+        "laravel"
+    ],
+    "license": "MIT",
+    "require": {
+        "php": "^8.4",
+        "jenssegers/agent": "^2.6",
+        "laravel/framework": "^13.0",
+        "laravel/tinker": "^3.0",
+        "mews/captcha": "^3.2",
+        "simplesoftwareio/simple-qrcode": "2.0.0",
+        "stripe/stripe-php": "^22.0",
+        "yansongda/pay": "^3.7",
+        "dcat-x/laravel-admin": "^2.0",
+        "ext-bcmath": "*",
+        "ext-dom": "*",
+        "guzzlehttp/guzzle": "^7.0.1",
+        "paypal/paypal-server-sdk": "^2.4"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.9.1",
+        "mockery/mockery": "^1.0",
+        "phpunit/phpunit": "^13.0"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "platform-check": true
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": []
+        }
+    },
+    "autoload": {
+        "psr-4": { "App\\": "../../../app/" },
+        "files": [ "../../../app/Helpers/functions.php" ]
+    },
+    "autoload-dev": {
+        "psr-4": { "Tests\\": "../../" },
+        "exclude-from-classmap": [ "../../Integration/MySqlConcurrency/" ]
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

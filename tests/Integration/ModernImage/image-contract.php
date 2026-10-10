@@ -1,0 +1,36 @@
+<?php
+error_reporting(E_ALL);
+$checks=0;$issues=[];$applications=[];
+function ic_check($condition,$label){global $checks;if(!$condition)throw new RuntimeException('Image native contract: '.$label);$checks++;}
+$observer=function($level,$message,$file,$line)use(&$issues){if(!($level&error_reporting()))return false;$issues[]=compact('level','message','file','line');throw new ErrorException($message,0,$level,$file,$line);};
+set_error_handler($observer);
+ic_check(PHP_VERSION==='8.5.11'&&PHP_OS_FAMILY==='Linux'&&PHP_BINARY==='/usr/local/bin/php'&&posix_geteuid()===0,'actual original image PHP in unprivileged namespace');
+$installed=json_decode(file_get_contents('/app/vendor/composer/installed.json'),true,512,JSON_THROW_ON_ERROR);$lock=json_decode(file_get_contents('/app/composer.lock'),true,512,JSON_THROW_ON_ERROR);
+ic_check($installed['dev']===false&&count($installed['packages'])===100&&!is_dir('/app/tests'),'exact100 runtime no tests');
+$packages=[];foreach($installed['packages']as$package)$packages[$package['name']]=$package;
+foreach($lock['packages']as$package)ic_check(isset($packages[$package['name']])&&$packages[$package['name']]['version']===$package['version']&&($packages[$package['name']]['source']['reference']??null)===($package['source']['reference']??null),'original runtime package provenance');
+foreach($lock['packages-dev']as$package)ic_check(!isset($packages[$package['name']]),'each development package absent');
+$loader=require '/app/vendor/autoload.php';$app=require '/app/bootstrap/app.php';
+$app->afterBootstrapping(Illuminate\Foundation\Bootstrap\HandleExceptions::class,function($app)use($observer,&$applications){$applications[]=['id'=>spl_object_id($app),'base'=>$app->basePath()];set_error_handler($observer);});
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();set_error_handler($observer);
+ic_check($app->version()==='13.35.0'&&$app->environment()==='production'&&$app->basePath()==='/app'&&$app->storagePath()==='/app/storage','actual unchanged copied application identity');
+ic_check(array_keys(Composer\Autoload\ClassLoader::getRegisteredLoaders())===['/app/vendor']&&!class_exists('Tests'.chr(92).'TestCase',false),'sole no-dev original loader');
+ic_check(!$app->configurationIsCached()&&!$app->routesAreCached()&&count($applications)===1,'actual original cold bootstrap');
+$name='Mews'.chr(92).'Captcha'.chr(92).'CaptchaServiceProvider';$provider=$app->getProvider($name);
+ic_check($provider&&get_class($provider)===$name&&$app->register($name)===$provider&&count($app->getProviders($name))===1,'original captcha identity and registration');
+ic_check((new ReflectionClass($provider))->getFileName()==='/app/bootstrap/compat/captcha-service-provider.php','actual copied compatibility provider');
+$paths=Illuminate\Support\ServiceProvider::pathsToPublish($name,'config');ic_check(count($paths)===1&&array_values($paths)===['/app/config/captcha.php'],'actual original publish target');
+$cache=$app['cache'];$hash=$app['hash']->make('image50answer');$cache->put('captcha_'.md5($hash),true,60);
+ic_check($app['validator']->make(['answer'=>'IMAGE50ANSWER'],['answer'=>'captcha_api:'.$hash.',default'])->passes(),'actual native correct API answer');
+ic_check(!$app['validator']->make(['answer'=>'IMAGE50ANSWER'],['answer'=>'captcha_api:'.$hash.',default'])->passes(),'actual consumed API answer');
+$hash=$app['hash']->make('image50answer');$cache->put('captcha_'.md5($hash),true,60);
+ic_check(!$app['validator']->make(['answer'=>'wrong'],['answer'=>'captcha_api:'.$hash.',default'])->passes(),'actual native wrong API answer');
+$image=$app['captcha']->create('default');$bytes=$image->getContent();$size=getimagesizefromstring($bytes);
+ic_check($image->getStatusCode()===200&&$size!==false&&$size[0]===120&&$size[1]===36,'original image GD captcha bytes');file_put_contents('/probe/captcha-image.bin',$bytes);
+$pdo=new PDO('sqlite:/app/storage/image-fixture.sqlite');$pdo->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);$pdo->exec('CREATE TABLE image_native_marker(id INTEGER PRIMARY KEY, name TEXT NOT NULL)');$pdo->exec("INSERT INTO image_native_marker VALUES(1,'owned-image50')");
+ic_check($pdo->query('SELECT name FROM image_native_marker')->fetchColumn()==='owned-image50','actual image native SQLite extension');$pdo=null;
+ic_check($app['config']->get('app.timezone')==='Asia/Shanghai','original timezone configuration');
+ic_check($applications[0]['base']==='/app'&&!$issues&&error_get_last()===null,'observed native boot and runtime diagnostics absent');
+$app['db']->disconnect();
+$result=['status'=>'PASS','checks'=>$checks,'php'=>PHP_VERSION,'binary'=>PHP_BINARY,'sapi'=>PHP_SAPI,'framework'=>$app->version(),'uid'=>posix_geteuid(),'pid'=>getmypid(),'base'=>$app->basePath(),'applications'=>$applications,'issues'=>$issues,'captcha_sha'=>hash('sha256',$bytes),'captcha_dimensions'=>[$size[0],$size[1]],'loaded_ini'=>php_ini_loaded_file(),'scanned_ini'=>php_ini_scanned_files(),'extensions'=>get_loaded_extensions(),'included'=>get_included_files(),'scope'=>'Original pinned image PHP/rootfs CLI only, no Docker builder/Engine/stock user drop/service or cron claim. Current accepted app/core/locks copied verbatim; original Composer no-dev install uses same validated100 package tree.' ];
+file_put_contents('/probe/image-contract.json',json_encode($result,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR).PHP_EOL);echo json_encode(['status'=>'PASS','checks'=>$checks,'php'=>PHP_VERSION,'framework'=>$app->version()],JSON_THROW_ON_ERROR),PHP_EOL;

@@ -1,0 +1,17 @@
+# Container stop contract
+
+The production Compose web service explicitly sends SIGTERM and waits120 seconds, leaving more time than Supervisor stopwaitsecs90 and the actual DeliverNotification deadline60. The Docker Linux default stop timeout is10 seconds, which can terminate an in-flight job before Supervisor drains it. [Official Docker stop semantics](https://docs.docker.com/reference/cli/docker/container/stop/) applies to direct Docker commands; use `docker run --stop-timeout=120` and preserve that deadline on stop/restart. [Compose stop_grace_period](https://docs.docker.com/reference/compose-file/services/#stop_grace_period) applies to the Compose service. Explicit shorter command-line timeout overrides this configuration.
+
+```powershell
+& tests/.runtime/php85/php.exe -c tests/.runtime/php85-fixture.ini tests/Integration/DeploymentContract/run.php --compose-bin=tests/.runtime/compose40/docker-compose.exe
+& tests/.runtime/php74/php.exe -c tests/.runtime/php74/php.ini tests/Integration/DeploymentContract/run.php --compose-bin=tests/.runtime/compose40/docker-compose.exe --legacy
+& tests/.runtime/php85/php.exe -c tests/.runtime/php85-fixture.ini tests/Integration/DeploymentContract/run.php --compose-bin=tests/.runtime/compose40/docker-compose.exe --candidate
+```
+
+The default selects the modern root vendor and needs PHP 8.4+ (the commands use PHP 8.5). `--legacy` explicitly selects `tests/Compatibility/Laravel6/vendor` on PHP 7.4; install it first with `composer install --working-dir=tests/Compatibility/Laravel6 --no-scripts --no-plugins` using a Composer-compatible PHP runtime. `--candidate` retains the independent Laravel13 candidate vendor; the two flags are mutually exclusive. The summary records the actual PHP/framework/vendor.
+
+Provide an existing official standalone Compose binary for --compose-bin on another machine. The local ignored Windows5.6.0 release was verified against published SHA2568aeaa0055e660e12cf07cd70680dc8333957fe6718528b91ec3da084eab62483; [release](https://github.com/docker/compose/releases/tag/v5.6.0) includes platform binaries and checksums. The fixture does not install a container engine.
+
+The runner invokes real Compose config with an explicit empty env file, isolated Docker configuration and an unreachable local DOCKER_HOST. It normalizes the actual service and compares grace with Supervisor configuration and the original job default property; job timeout overrides the CLI timeout, so the larger actual deadline governs draining. --file supports isolated mutated Compose copies for negative controls; --worker-config supports synthetic worker settings to prove job60 still governs CLI30 and Supervisor45 is too short while90 passes. Each run preserves model JSON, stderr, input/binary SHA256 and the five checks under tests/.runtime/deployment-contract. The original source file must remain unchanged during parsing. A30-second owned-process wait and bounded termination avoid hanging config validation.
+
+Round40 original configuration failed on absent explicit signal/grace; repaired configuration passed on both runtime trees. Short grace10s, SIGKILL and missing grace controls each fail exactly one corresponding check. The current7.4 base image already handles SIGQUIT as shutdown, so explicit SIGTERM makes the service contract stable; missing container grace is the actual in-flight interruption defect. Base image ENTRYPOINT/CMD/cron registration was inspected separately. No engine creation/build/run or real shop environment is part of this parser fixture.

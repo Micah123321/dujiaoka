@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="bootstrap.php" colors="false" recordTestRunHistory="false"
+         failOnAllIssues="true" displayDetailsOnAllIssues="true"
+         failOnEmptyTestSuite="true">
+    <testsuites>
+        <testsuite name="Independent units">
+            <directory suffix="Test.php">../../Unit</directory>
+        </testsuite>
+        <testsuite name="Application transactions and framework compatibility">
+            <directory suffix="Test.php">../../Feature</directory>
+        </testsuite>
+        <testsuite name="Modern SMTP protocol">
+            <file>SmtpProtocolTest.php</file>
+        </testsuite>
+        <testsuite name="Modern spreadsheet protocol">
+            <file>SpreadsheetCompatibilityTest.php</file>
+        </testsuite>
+        <testsuite name="Maintained runtime boundaries">
+            <file>RuntimeBoundaryCompatibilityTest.php</file>
+        </testsuite>
+    </testsuites>
+</phpunit>
