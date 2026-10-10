@@ -1,0 +1,127 @@
+name: Docker image
+
+on:
+  push:
+    branches: [master, main]
+    tags: ['v*']
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: bcmath, dom, gd, intl, mbstring, pdo_sqlite, redis, zip, pcntl
+          tools: composer:v2
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Validate and build storefront
+        run: |
+          npm ci --prefix frontend
+          npm run typecheck --prefix frontend
+          npm test --prefix frontend
+          npm run build --prefix frontend
+      - name: Install locked PHP dependencies
+        run: |
+          composer validate --strict --no-check-all --check-lock --no-check-publish --no-plugins
+          composer install --prefer-dist --no-interaction --no-scripts --no-plugins --optimize-autoloader
+      - name: PHP regression suite
+        run: php vendor/bin/phpunit --colors=never
+
+  image:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Set image name
+        id: image
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: echo "name=ghcr.io/${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - name: Image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+      - name: Build runnable image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: dujiaoka:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Verify Compose installation and persistence
+        env:
+          COMPOSE_PROJECT_NAME: dujiaoka-ci-${{ github.run_id }}-${{ github.run_attempt }}
+          DUJIAOKA_IMAGE: dujiaoka:ci
+          HTTP_BIND: 127.0.0.1
+          HTTP_PORT: '8010'
+          APP_URL: http://127.0.0.1:8010
+          DB_PASSWORD: ci-fixture-database-password
+          MYSQL_ROOT_PASSWORD: ci-fixture-root-password
+        run: bash deploy/smoke-test.sh
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish verified image
+        if: github.event_name != 'pull_request'
+        id: publish
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Prepare Compose deployment bundle
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+          IMAGE_DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          mkdir -p release
+          cp docker-compose.yml compose.env.example docs/docker-compose-deployment.md release/
+          printf '%s\n' "$IMAGE_TAGS" > release/images.txt
+          printf '%s\n' "$IMAGE_DIGEST" > release/digest.txt
+      - name: Upload Compose deployment bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: dujiaoka-compose
+          path: release/
+          retention-days: 30
+          if-no-files-found: error
