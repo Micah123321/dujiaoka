@@ -51,6 +51,6 @@ curl --fail --silent --show-error "$url/" > /dev/null
 curl --fail --silent --show-error "$url/admin/auth/login" > /dev/null
 curl --fail --silent --show-error "$url/assets/modern/manifest.json" > /dev/null
 docker compose exec -T web supervisorctl status dujiaoka-queue | grep -q RUNNING
-docker compose exec -T web supervisorctl status cron | grep -q RUNNING
+docker compose exec -T web supervisorctl status cron:crond | grep -q RUNNING
 docker compose exec -T --user application web php artisan schedule:run --no-interaction
 echo 'PASS: install, migrations, HTTP, assets, queue, cron and volume persistence.'
