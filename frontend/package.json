@@ -6,6 +6,8 @@
   "scripts": {
     "build": "vite build",
     "typecheck": "vue-tsc --noEmit",
+    "build:admin": "vite build --config admin.vite.config.ts",
+    "typecheck:admin": "vue-tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {

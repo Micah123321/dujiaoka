@@ -27,9 +27,9 @@ const hash = value => crypto.createHash('sha256').update(value).digest('hex');
         assert.equal(response.headers()['x-fixture-asset-tree'], tree, 'Loaded the wrong asset dependency tree');
         report.assets[url.pathname] = response.status();
       }
-      if (url.pathname.endsWith('/dcat-api/value')) bodies.push(response.json().then(data => {
+      if (url.pathname.endsWith('/operations/overview/data')) bodies.push(response.json().then(data => {
         assert.equal(response.status(), 200);
-        report.metrics.push(data);
+        if (!report.metrics.length) report.metrics.push(...data.cards);
       }));
     });
     await page.route('**/*', route => {
@@ -77,17 +77,19 @@ const hash = value => crypto.createHash('sha256').update(value).digest('hex');
     await page.waitForLoadState('networkidle');
     await Promise.all(bodies);
     assert.equal(report.metrics.length, 4);
-    const dashboard = await page.locator('.content-wrapper').innerText();
-    assert.match(dashboard, /2\s+总订单数/);
-    assert.match(dashboard, /50%/);
-    assert.match(dashboard, /9￥/);
-    assert.equal(await page.locator('.apexcharts-canvas').count(), 4);
+    const values = Object.fromEntries(report.metrics.map(card => [card.key, Number(card.value)]));
+    assert.equal(values.today_orders, 2);
+    assert.equal(values.pending_orders, 1);
+    assert.equal(values.abnormal_orders, 0);
+    assert.equal(values.today_sales, 9);
+    assert.equal(await page.locator('.wb-metric').count(), 4);
+    assert.equal(await page.locator('.wb-trend svg').count(), 1);
     const csrf = await context.request.post(base + '/admin/goods-group', {form: {gp_name: 'CSRF MUST NOT SAVE'}});
     assert.equal(csrf.status(), 419);
     report.actions.push('unauthenticated redirect, wrong password rejection, real session login, missing CSRF rejected, four database-backed metrics');
     await page.screenshot({path: path.join(output, 'dashboard-desktop.png'), fullPage: false});
     // Hash the bytes delivered at the same URLs against the installed package, not published legacy files.
-    const dist = path.join(__dirname, tree === 'candidate' ? 'Compatibility/Laravel12/vendor/dcat-x/laravel-admin/resources/dist' : '../vendor/dcat/laravel-admin/resources/dist');
+    const dist = path.join(__dirname, tree === 'candidate' ? 'Compatibility/Laravel12/vendor/dcat-x/laravel-admin/resources/dist' : '../vendor/dcat-x/laravel-admin/resources/dist');
     report.assetHashes = {};
     for (const relative of ['dcat/js/dcat-app.js', 'dcat/css/dcat-app.css']) {
       const response = await context.request.get(base + '/vendor/dcat-admin/' + relative);
@@ -159,9 +161,11 @@ const hash = value => crypto.createHash('sha256').update(value).digest('hex');
       const bounds = await page.locator('.content-wrapper').boundingBox();
       assert.ok(bounds && bounds.width <= 391 && bounds.x >= -1, 'Mobile content shell bounds ' + route);
       if (route === '/admin') {
-        const links = await page.locator('.dashboard-title .links a').evaluateAll(es => es.map(e => ({height: e.getBoundingClientRect().height, width: e.getBoundingClientRect().width, parent: e.parentElement.getBoundingClientRect().width})));
-        assert.equal(links.length, 4);
-        assert.ok(links.every(link => link.height < 30 && link.width <= link.parent));
+        const links = await page.locator('.wb-navigation-links a').evaluateAll(es => es.map(e => ({width: e.getBoundingClientRect().width, parent: e.parentElement.getBoundingClientRect().width})));
+        assert.equal(links.length, 6);
+        await page.locator('.wb-mobile-nav').click();
+        assert.equal(await page.locator('.wb-navigation-links').isVisible(), true);
+        await page.locator('.wb-mobile-nav').click();
         await page.screenshot({path: path.join(output, 'dashboard-mobile.png'), fullPage: true});
         await page.locator('[data-widget=pushmenu]').click();
         await page.locator('body.sidebar-open').waitFor();

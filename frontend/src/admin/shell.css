@@ -1,0 +1,57 @@
+/* Scoped to the admin body; native Dcat permissions and CRUD markup stay intact. */
+body.dujiaoka-admin { background:#f7f8f2; color:#253c30; font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif; }
+.dujiaoka-admin .app-content,.dujiaoka-admin .content-wrapper { background:#f7f8f2 !important; }
+.dujiaoka-admin .content-wrapper { transition:none !important; }
+body.dujiaoka-admin.navbar-fixed-top .app-content { padding-top:64px !important; }
+.dujiaoka-admin .content-header { padding-bottom:10px; }
+.dujiaoka-admin .content-header h1 { color:#26422f; font-size:23px; font-weight:600; letter-spacing:-.6px; }
+.dujiaoka-admin .content-header h1 small { color:#97a38e; font-weight:400; font-size:12px; }
+.dujiaoka-admin .main-sidebar { background:#1a302b !important; border-right:1px solid #1a302b; box-shadow:none !important; }
+.dujiaoka-admin .main-sidebar .brand-link { color:#f1f0dc !important; background:#1a302b !important; border-color:#ffffff0d !important; height:72px; display:flex; align-items:center; font-weight:550; letter-spacing:.5px; }
+.dujiaoka-admin .main-sidebar .brand-link img { border-radius:8px; }
+.dujiaoka-admin .main-sidebar .nav-sidebar { padding:12px 10px; }
+.dujiaoka-admin .main-sidebar .nav-sidebar .nav-link { color:#a6b7aa !important; border-radius:7px; margin:3px 0; padding:11px 13px; font-size:12px; transition:background .15s; }
+.dujiaoka-admin .main-sidebar .nav-sidebar .nav-link:hover { background:#ffffff09 !important; color:#e1ebda !important; }
+.dujiaoka-admin .main-sidebar .nav-sidebar .nav-link.active { background:#345b48 !important; color:#e3edce !important; box-shadow:none !important; }
+.dujiaoka-admin .main-sidebar .nav-treeview { background:transparent !important; padding-left:9px; }
+.dujiaoka-admin .main-sidebar .nav-icon,.dujiaoka-admin .main-sidebar .fa-fw { color:inherit !important; opacity:.8; }
+body.dujiaoka-admin .header-navbar.navbar.navbar-with-menu,.dujiaoka-admin .main-header { border-bottom:1px solid #e7ece0; background:#fffefa !important; box-shadow:none !important; }
+body.dujiaoka-admin .header-navbar.navbar.navbar-with-menu .nav-link,.dujiaoka-admin .main-header .nav-link { color:#65765d !important; }
+.dujiaoka-admin .main-sidebar .main-header.navbar { background:#1a302b !important; color:#f1f0dc !important; }
+.dujiaoka-admin .main-sidebar .main-header.navbar a { color:#f1f0dc !important; }
+body.dujiaoka-admin .main-sidebar .navbar-header { background:#1a302b !important; }
+body.dujiaoka-admin .header-navbar .user-nav,.dujiaoka-admin .header-navbar .user-nav .user-name,.dujiaoka-admin .header-navbar .user-nav i { color:#65765d !important; }
+.dujiaoka-admin .main-sidebar .nav-sidebar .nav-link.active { color:#e3edce !important; }
+.dujiaoka-admin .card { border:1px solid #e5ebdd; border-radius:11px; box-shadow:0 3px 10px #132d1803 !important; }
+.dujiaoka-admin .card-header { border-bottom-color:#edf0e5; padding:19px 22px; }
+.dujiaoka-admin .card-title { font-weight:550; color:#345333; }
+.dujiaoka-admin .card-body { padding:22px; }
+.dujiaoka-admin .box { border-radius:11px; box-shadow:none; }
+.dujiaoka-admin .table thead th { background:#fafbf5; color:#859579; font-size:11px; border-color:#e8edde; }
+.dujiaoka-admin .table td { border-color:#eef1e8; padding-top:15px; padding-bottom:15px; }
+.dujiaoka-admin .btn { border-radius:6px; box-shadow:none !important; font-size:12px; }
+.dujiaoka-admin .btn-primary,.dujiaoka-admin .bg-primary { background:#267c64 !important; border-color:#267c64 !important; }
+.dujiaoka-admin .btn-primary:hover { background:#1d6552 !important; border-color:#1d6552 !important; }
+.dujiaoka-admin .btn-outline-primary { color:#267c64; border-color:#91baa6; }
+.dujiaoka-admin .btn-outline-primary:hover { background:#267c64; color:white; }
+.dujiaoka-admin .btn-danger { background:#b6694f; border-color:#b6694f; }
+.dujiaoka-admin .btn-success { background:#51855a; border-color:#51855a; }
+.dujiaoka-admin .form-control { border-color:#dfe7d7; border-radius:6px; color:#3f5c35; }
+.dujiaoka-admin .form-control:focus { border-color:#7aa47e; box-shadow:0 0 0 3px #edf3e7; }
+.dujiaoka-admin .select2-container--default .select2-selection--single { border-color:#dfe7d7; border-radius:6px; }
+.dujiaoka-admin .pagination .page-item.active .page-link { background:#267c64; border-color:#267c64; }
+.dujiaoka-admin .pagination .page-link { color:#5c7a4a; border-color:#e3eada; }
+.dujiaoka-admin .main-footer { border-top-color:#e7ecdf; background:#f7f8f2; color:#a5b097; font-size:10px; }
+.dujiaoka-admin .login-page { background:radial-gradient(ellipse at 15% 0,#e3ecd9 0,transparent 55%),#f8f8f0 !important; }
+.dujiaoka-admin .login-box { width:390px; max-width:calc(100vw - 36px); }
+.dujiaoka-admin .login-box .card { border:1px solid #dfe8d4; border-radius:15px; box-shadow:0 18px 60px #2243170a !important; }
+.dujiaoka-admin .login-card-body { padding:34px 30px; border-radius:15px; background:#fffefa; }
+.dujiaoka-admin .login-logo { font-size:26px; font-weight:600; letter-spacing:-.7px; color:#28462a; }
+.dujiaoka-admin .login-box-msg { color:#93a17d; font-size:12px; }
+@media(min-width:992px) {
+  .dujiaoka-admin .content-wrapper { padding:22px 26px; }
+  .dujiaoka-admin:not(.horizontal-menu):not(.sidebar-collapse) .app-content > .content-wrapper { margin-left:210px !important; }
+  .dujiaoka-admin.sidebar-collapse:not(.horizontal-menu) .app-content > .content-wrapper { margin-left:60px !important; }
+}
+@media(max-width:700px) { .dujiaoka-admin .content-wrapper { padding:13px 14px; } .dujiaoka-admin .card-body { padding:16px; } }
+.dujiaoka-admin.dujiaoka-workbench .content-header { display:none; }

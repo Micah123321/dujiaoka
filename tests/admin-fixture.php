@@ -9,14 +9,16 @@ $extended = $cli ? in_array('--extended', $argv, true) : getenv('DUJIAOKA_ADMIN_
 $statusMail = $cli ? in_array('--status-mail', $argv, true) : getenv('DUJIAOKA_ADMIN_STATUS_MAIL') === '1';
 $deletion = $cli ? in_array('--deletion', $argv, true) : getenv('DUJIAOKA_ADMIN_DELETION') === '1';
 $forms = $cli ? in_array('--forms', $argv, true) : getenv('DUJIAOKA_ADMIN_FORMS') === '1';
+$operations = $cli ? in_array('--operations', $argv, true) : getenv('DUJIAOKA_ADMIN_OPERATIONS') === '1';
 $uploadFixture = $extended || $deletion;
 $fixtureAction = $cli ? (in_array('--publish-status-mail', $argv, true) ? 'publish' : (in_array('--work-status-mail', $argv, true) ? 'work' : (in_array('--advance-status-mail', $argv, true) ? 'advance' : null))) : null;
-if ((int) $statusMail + (int) $extended + (int) $deletion + (int) $forms > 1) throw new RuntimeException('Choose one isolated fixture mode.');
-$port = $forms ? 8202 : ($deletion ? 8201 : ($statusMail ? 8200 : ($extended ? 8199 : 8198)));
+if ((int) $statusMail + (int) $extended + (int) $deletion + (int) $forms + (int) $operations > 1) throw new RuntimeException('Choose one isolated fixture mode.');
+$port = $operations ? 8203 : ($forms ? 8202 : ($deletion ? 8201 : ($statusMail ? 8200 : ($extended ? 8199 : 8198))));
 $fixtureUrl = 'http://127.0.0.1:' . $port;
 $runtimeName = 'admin-' . ($forms ? 'forms-' : ($deletion ? 'deletion-' : ($statusMail ? 'status-mail-' : ($extended ? 'extended-' : '')))) . ($candidate ? 'candidate' : 'root');
+if ($operations) $runtimeName = 'admin-operations-' . ($candidate ? 'candidate' : 'root');
 $runtime = __DIR__ . '/.runtime/' . $runtimeName;
-if ($cli && !$initialize && !$inspect && !($statusMail && $fixtureAction)) { fwrite(STDERR, "Use --init-isolated-admin or --inspect-isolated-admin [--candidate] [--extended|--status-mail|--deletion|--forms]\n"); exit(1); }
+if ($cli && !$initialize && !$inspect && !($statusMail && $fixtureAction)) { fwrite(STDERR, "Use --init-isolated-admin or --inspect-isolated-admin [--candidate] [--extended|--status-mail|--deletion|--forms|--operations]\n"); exit(1); }
 if (!$cli && (!in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true) || ($_SERVER['HTTP_HOST'] ?? '') !== '127.0.0.1:' . $port)) {
     http_response_code(403); exit('Fixture host mismatch');
 }
@@ -35,8 +37,10 @@ if (!$cli) {
         header('X-Fixture-Asset-Tree: ' . ($candidate ? 'candidate' : 'root'));
         readfile($file); return;
     }
-    if ($path !== '/admin' && strpos($path, '/admin/') !== 0 && strpos($path, '/vendor/') !== 0) { http_response_code(404); exit('Fixture route not found'); }
-    $mounts = ['/vendor/dcat-admin/' => $vendor . ($candidate ? '/dcat-x/laravel-admin/resources/dist/' : '/dcat/laravel-admin/resources/dist/'), '/vendor/dujiaoka-admin/' => $root . '/public/vendor/dujiaoka-admin/'];
+    if ($path !== '/admin' && strpos($path, '/admin/') !== 0 && strpos($path, '/vendor/') !== 0 && strpos($path, '/assets/admin/') !== 0) { http_response_code(404); exit('Fixture route not found'); }
+    $dcatPackage = is_dir($vendor . '/dcat-x/laravel-admin') ? '/dcat-x/laravel-admin' : '/dcat/laravel-admin';
+    $mounts = ['/vendor/dcat-admin/' => $vendor . $dcatPackage . '/resources/dist/',
+        '/vendor/dujiaoka-admin/' => $root . '/public/vendor/dujiaoka-admin/', '/assets/admin/' => $root . '/public/assets/admin/'];
     foreach ($mounts as $prefix => $directory) {
         if (strpos($path, $prefix) !== 0) continue;
         $base = realpath($directory);
@@ -62,7 +66,7 @@ $settings = [
     'APP_EVENTS_CACHE' => 'tests/.runtime/' . $runtimeName . '/events.php',
     'LARAVEL_STORAGE_PATH' => $runtime . '/storage', 'DB_DATABASE' => $runtime . '/fixture.sqlite',
     'ADMIN_ROUTE_PREFIX' => 'admin', 'ADMIN_ROUTE_DOMAIN' => '', 'ADMIN_HTTPS' => 'false', 'ADMIN_ASSETS_SERVER' => '',
-    'SESSION_DRIVER' => 'file', 'SESSION_COOKIE' => $forms ? 'dujiaoka_admin_forms_fixture' : ($deletion ? 'dujiaoka_admin_deletion_fixture' : ($statusMail ? 'dujiaoka_admin_status_fixture' : ($extended ? 'dujiaoka_admin_extended_fixture' : 'dujiaoka_admin_fixture'))), 'SESSION_SECURE_COOKIE' => 'false', 'SESSION_DOMAIN' => '',
+    'SESSION_DRIVER' => 'file', 'SESSION_COOKIE' => $operations ? 'dujiaoka_admin_operations_fixture' : ($forms ? 'dujiaoka_admin_forms_fixture' : ($deletion ? 'dujiaoka_admin_deletion_fixture' : ($statusMail ? 'dujiaoka_admin_status_fixture' : ($extended ? 'dujiaoka_admin_extended_fixture' : 'dujiaoka_admin_fixture')))), 'SESSION_SECURE_COOKIE' => 'false', 'SESSION_DOMAIN' => '',
     'CACHE_DRIVER' => 'file', 'CACHE_STORE' => 'file',
 ];
 foreach ($settings as $key => $value) { putenv($key . '=' . $value); $_ENV[$key] = $value; $_SERVER[$key] = $value; }
@@ -81,7 +85,7 @@ if ($initialize) {
         if (Illuminate\Support\Facades\DB::table('fixture_marker')->value('name') !== 'dujiaoka-admin-browser-v1') throw new RuntimeException('Fixture marker mismatch');
         foreach (Illuminate\Support\Facades\DB::select("SELECT name FROM sqlite_master WHERE type='table' AND name<>'sqlite_sequence'") as $table) Illuminate\Support\Facades\Schema::drop($table->name);
     } elseif (Illuminate\Support\Facades\DB::select("SELECT name FROM sqlite_master WHERE type='table'")) throw new RuntimeException('Unmarked fixture is not empty');
-    Tests\Fixtures\AdminData::create($extended);
+    Tests\Fixtures\AdminData::create($extended || $operations);
     if ($forms) {
         $third = (array) Illuminate\Support\Facades\DB::table('goods')->where('id', 2)->first();
         $third['id'] = 3; $third['gd_name'] = 'Fixture Third Goods';
@@ -118,6 +122,11 @@ if ($statusMail) {
         exit($exit);
     }
     if ($inspect) { echo json_encode(Tests\Fixtures\OrderStatusMailData::state($runtime)), PHP_EOL; return; }
+}
+if ($operations) {
+    require_once __DIR__ . '/Fixtures/AdminOperationsBrowserData.php';
+    Tests\Fixtures\AdminOperationsBrowserData::configure($runtime, $initialize);
+    if ($inspect) { echo json_encode(Tests\Fixtures\AdminOperationsBrowserData::state()), PHP_EOL; return; }
 }
 if ($inspect) {
     $db = Illuminate\Support\Facades\DB::getFacadeRoot();

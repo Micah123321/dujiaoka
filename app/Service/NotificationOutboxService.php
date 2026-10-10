@@ -226,7 +226,10 @@ class NotificationOutboxService
         }
         $this->requireCommittedState();
         return (bool) DB::table('notification_outbox')->where('id', $id)->whereIn('channel', $this->enabledChannels())
-            ->whereNotNull('failed_at')->whereNull('delivered_at')->update([
+            ->whereNotNull('failed_at')->whereNull('delivered_at')
+            ->where(function (Builder $query) {
+                $query->whereNull('reserved_until')->orWhere('reserved_until', '<=', Carbon::now());
+            })->update([
                 'attempts' => 0,
                 'failed_at' => null,
                 'available_at' => Carbon::now(),

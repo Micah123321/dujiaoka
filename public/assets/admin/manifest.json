@@ -1,0 +1,12 @@
+{
+  "src/admin/main.ts": {
+    "file": "assets/workbench-8hCeluqA.js",
+    "name": "main",
+    "src": "src/admin/main.ts",
+    "isEntry": true
+  },
+  "style.css": {
+    "file": "assets/style-D1-KsTSt.css",
+    "src": "style.css"
+  }
+}

@@ -256,6 +256,28 @@ class NotificationOutboxTest extends TestCase
         $this->assertNotNull($this->row()->delivered_at);
     }
 
+    public function testOperatorRetryPreservesActiveDeliveryLeaseUntilExpiry(): void
+    {
+        $this->captureJobs();
+        $this->process->completedOrder('OUTBOX', 10, 'trade');
+        $id = $this->row()->id;
+        $token = str_repeat('A', 32);
+        $until = Carbon::now()->addSeconds(NotificationOutboxService::LEASE_SECONDS);
+        DB::table('notification_outbox')->where('id', $id)->update([
+            'failed_at' => Carbon::now(), 'attempts' => NotificationOutboxService::MAX_ATTEMPTS,
+            'reservation_token' => $token, 'reserved_until' => $until,
+        ]);
+        $before = (array) $this->row();
+        $this->assertFalse($this->outbox->retryFailed($id));
+        $this->assertSame($before, (array) $this->row());
+        Carbon::setTestNow($until);
+        $this->assertTrue($this->outbox->retryFailed($id));
+        $this->assertNull($this->row()->reservation_token);
+        $this->assertNull($this->row()->failed_at);
+        $this->assertFalse($this->outbox->retryFailed($id));
+        $this->assertCount(0, $this->history);
+    }
+
     public function testOperatorRetryOnlyResetsExhaustedIntent(): void
     {
         $this->responses(array_fill(0, NotificationOutboxService::MAX_ATTEMPTS, new Response(500)));

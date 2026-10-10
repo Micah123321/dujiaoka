@@ -1,26 +1,29 @@
 <?php
 
+use App\Admin\Support\OperationsAccess;
+use App\Admin\Support\WorkbenchAssets;
 use Dcat\Admin\Admin;
-use Dcat\Admin\Grid;
-use Dcat\Admin\Form;
-use Dcat\Admin\Grid\Filter;
-use Dcat\Admin\Show;
 
-/**
- * Dcat-admin - admin builder based on Laravel.
- * @author jqh <https://github.com/jqhph>
- *
- * Bootstraper for Admin.
- *
- * Here you can remove builtin form field:
- *
- * extend custom field:
- * Dcat\Admin\Form::extend('php', PHPEditor::class);
- * Dcat\Admin\Grid\Column::extend('php', PHPEditor::class);
- * Dcat\Admin\Grid\Filter::extend('php', PHPEditor::class);
- *
- * Or require js and css assets:
- * Admin::css('/packages/prettydocs/css/styles.css');
- * Admin::js('/packages/prettydocs/js/main.js');
- *
- */
+$bodyClasses = config('admin.layout.body_class', []);
+$bodyClasses = is_array($bodyClasses) ? $bodyClasses : preg_split('/\s+/', (string) $bodyClasses, -1, PREG_SPLIT_NO_EMPTY);
+config(['admin.layout.body_class' => array_values(array_unique(array_merge($bodyClasses, ['dujiaoka-admin'])))]);
+WorkbenchAssets::register();
+
+Admin::menu(function ($menu) {
+    $user = Admin::user();
+    if (!$user) return;
+    $roles = (method_exists($user, 'allRoles') ? $user->allRoles() : $user->roles)
+        ->map(function ($role) { return ['slug' => $role->slug]; })->all();
+    $permissions = $user->allPermissions()->map(function ($permission) { return ['slug' => $permission->slug]; })->all();
+    $menuNodes = [];
+    $icons = ['overview' => 'fa-line-chart', 'stripe' => 'fa-credit-card', 'paypal' => 'fa-paypal',
+        'notifications' => 'fa-bell-o', 'quotes' => 'fa-exchange', 'runtime' => 'fa-heartbeat'];
+    foreach (OperationsAccess::sections() as $section => $label) {
+        if (!OperationsAccess::allows($section, 'GET')) continue;
+        // String IDs do not collide with the existing numeric database menu IDs.
+        $menuNodes[] = ['id' => 'dujiaoka-operations-' . $section, 'parent_id' => 0,
+            'title' => $label, 'icon' => $icons[$section], 'uri' => 'operations/' . $section,
+            'roles' => $roles, 'permissions' => $permissions];
+    }
+    if ($menuNodes) $menu->add($menuNodes, 15);
+});

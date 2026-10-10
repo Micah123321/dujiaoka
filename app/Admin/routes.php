@@ -23,3 +23,23 @@ Route::group([
     $router->get('system-setting', 'SystemSettingController@systemSetting');
     $router->get('email-test', 'EmailTestController@emailTest');
 });
+
+$operationsMiddleware = config('admin.route.middleware');
+$adminIndex = array_search('admin', $operationsMiddleware, true);
+array_splice($operationsMiddleware, $adminIndex === false ? count($operationsMiddleware) : $adminIndex, 0,
+    [\App\Admin\Middleware\OperationsMiddleware::class]);
+Route::group([
+    'prefix' => config('admin.route.prefix'),
+    'domain' => config('admin.route.domain'),
+    'namespace' => config('admin.route.namespace'),
+    'middleware' => $operationsMiddleware,
+], function (Router $router) {
+    foreach (\App\Admin\Support\OperationsAccess::sections() as $section => $label) {
+        $router->get('operations/' . $section, 'OperationsController@page')->defaults('section', $section)
+            ->name('operations.' . $section . '.page');
+        $router->get('operations/' . $section . '/data', 'OperationsController@data')->defaults('section', $section)
+            ->name('dcat-api.operations.' . $section . '.data');
+        $router->post('operations/' . $section . '/action', 'OperationsController@action')->defaults('section', $section)
+            ->name('dcat-api.operations.' . $section . '.action');
+    }
+});

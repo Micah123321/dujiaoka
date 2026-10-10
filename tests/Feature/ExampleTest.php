@@ -17,10 +17,11 @@ class ExampleTest extends TestCase
         $this->assertSame('sync', config('queue.default'));
         $compat = defined('DUJIAOKA_FRAMEWORK_PROBE');
         $this->assertSame(base_path($compat ? 'tests/Compatibility/Laravel12' : 'tests'), $this->app->environmentPath());
-        $this->assertSame(base_path($compat ? 'tests/.runtime/laravel12/storage' : 'tests/.runtime/storage'), $this->app->storagePath());
+        $scope = defined('DUJIAOKA_LEGACY_REPLAY') ? 'laravel6/' : ($compat ? 'laravel12/' : '');
+        $this->assertSame(base_path('tests/.runtime/' . $scope . 'storage'), $this->app->storagePath());
         foreach (['Config', 'Routes', 'Packages', 'Services', 'Events'] as $kind) {
             $method = 'getCached' . $kind . 'Path';
-            $this->assertSame(base_path('tests/.runtime/' . ($compat ? 'laravel12/' : '') . strtolower($kind) . '.php'), $this->app->$method());
+            $this->assertSame(base_path('tests/.runtime/' . $scope . strtolower($kind) . '.php'), $this->app->$method());
         }
     }
 }
