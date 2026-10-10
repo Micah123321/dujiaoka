@@ -92,6 +92,8 @@ Telegram: [https://t.me/dujiaoka](https://t.me/dujiaoka)
 ![首页.png](https://i.loli.net/2021/01/06/nHCSV5PdJIzT6Gy.png)
 
 ## 安装篇
+
+- [Docker Compose 完整部署教程（当前镜像）](docs/docker-compose-deployment.md)
 - [Linux环境安装](https://github.com/assimon/dujiaoka/wiki/linux_install)
 - [Docker安装](https://github.com/assimon/dujiaoka/wiki/docker_install)
 - [2.x版本宝塔安装教程](https://github.com/assimon/dujiaoka/wiki/2.x_bt_install)
@@ -100,6 +102,24 @@ Telegram: [https://t.me/dujiaoka](https://t.me/dujiaoka)
 - [系统升级](https://github.com/assimon/dujiaoka/wiki/update)
 - [各支付对应后台配置](https://github.com/assimon/dujiaoka/wiki/problems#各支付对应配置)
 - [视频教程及工具集合](https://pan.dujiaoka.com)
+
+Docker Compose 快捷启动：先复制模板，编辑 `.env.compose`，替换两个不同的随机数据库密码并设置 `APP_URL`（默认只监听 `127.0.0.1:8010`）。
+
+```sh
+cp compose.env.example .env.compose
+# 编辑 .env.compose：DB_PASSWORD、MYSQL_ROOT_PASSWORD、APP_URL。
+docker compose --env-file .env.compose pull
+docker compose --env-file .env.compose up -d --no-build --wait
+```
+
+新店打开 `/install`，数据库填写 `mysql:3306` 及模板一致的库名、用户名和密码，Redis 填写 `redis:6379`、密码留空。安装成功后执行：
+
+```sh
+docker compose --env-file .env.compose exec --user application web php artisan migrate --force
+docker compose --env-file .env.compose restart web
+```
+
+访问 `/admin` 后立即修改默认 `admin/admin`。从源码构建使用 `docker compose --env-file .env.compose up -d --build --wait`；域名 HTTPS、持久化、备份、更新/回滚及旧店迁移见[完整教程](docs/docker-compose-deployment.md)。旧店复用原库和 `APP_KEY`，不要重跑安装器或删除数据卷。
 
 ## 支付接口已集成
 - [x] 支付宝当面付
