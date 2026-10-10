@@ -169,9 +169,11 @@ class HomeController extends BaseController
             ];
             $dbConfig['connections']['mysql'] = array_merge($dbConfig['connections']['mysql'], $mysqlDB);
             // Redis
+            $redisPassword = $request->input('redis_password');
+            $redisPassword = in_array($redisPassword, [null, '', 'null'], true) ? null : $redisPassword;
             $redisDB = [
                 'host' => $request->input('redis_host'),
-                'password' => $request->input('redis_password', 'null'),
+                'password' => $redisPassword,
                 'port' => $request->input('redis_port'),
             ];
             $dbConfig['redis']['default'] = array_merge($dbConfig['redis']['default'], $redisDB);
@@ -189,6 +191,7 @@ class HomeController extends BaseController
             $installSql = database_path() . DIRECTORY_SEPARATOR . 'sql' . DIRECTORY_SEPARATOR . 'install.sql';
             $envTemp = file_get_contents($envExamplePath);
             $postData = $request->all();
+            $postData['redis_password'] = $redisPassword ?? 'null';
             // 临时写入key
             $postData['app_key'] = 'base64:' . base64_encode(
                     Encrypter::generateKey(config('app.cipher'))

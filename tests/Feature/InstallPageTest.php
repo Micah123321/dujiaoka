@@ -38,16 +38,21 @@ class InstallPageTest extends TestCase
         }
     }
 
-    public function testMatchingContainerSettingsReachTheDatabaseWithNormalizedRedisPassword(): void
+    public function testMatchingContainerSettingsReachRedisWithoutPasswordAuthentication(): void
     {
         $settings = $this->containerSettings();
         $settings['redis_password'] = 'null';
         $settings['app_url'] .= '/';
         \Illuminate\Support\Facades\DB::shouldReceive('purge')->once();
-        \Illuminate\Support\Facades\DB::shouldReceive('connection')->once()
-            ->andThrow(new \RuntimeException('Fixture database reached'));
+        $connection = \Mockery::mock();
+        $connection->shouldReceive('select')->with('select 1 limit 1')->once()->andReturn([]);
+        \Illuminate\Support\Facades\DB::shouldReceive('connection')->once()->andReturn($connection);
+        \Illuminate\Support\Facades\Redis::shouldReceive('set')->with('dujiaoka_com', 'ok')->once()->andReturn(true);
+        \Illuminate\Support\Facades\Redis::shouldReceive('get')->with('dujiaoka_com')->once()
+            ->andThrow(new \RuntimeException('Fixture Redis reached'));
 
-        $this->post('/do-install', $settings)->assertOk()->assertSee('Fixture database reached');
+        $this->post('/do-install', $settings)->assertOk()->assertSee('Fixture Redis reached');
+        $this->assertNull(config('database.redis.default.password'));
     }
 
     private function containerSettings(): array
