@@ -15,4 +15,6 @@ ln -sfn /data/install.lock /app/install.lock
 chown -R application:application /data /app/storage /app/bootstrap/cache /app/public/uploads
 chmod 0750 /data
 chmod 0600 /data/.env
+# Nginx serves public uploads under a different user from PHP-FPM.
+chmod -R u=rwX,go=rX /app/public/uploads
 su -s /bin/sh application -c 'cd /app && php artisan package:discover --ansi'

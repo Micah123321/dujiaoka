@@ -16,6 +16,6 @@ RUN mkdir -p public/vendor/dcat-admin && cp -a vendor/dcat-x/laravel-admin/resou
 COPY deploy/supervisor/queue.conf /opt/docker/etc/supervisor.d/dujiaoka-queue.conf
 COPY deploy/cron/dujiaoka /opt/docker/etc/cron/dujiaoka
 RUN docker-service-enable cron && chmod 0644 /opt/docker/etc/cron/dujiaoka
-RUN mkdir -p storage/logs storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache public/uploads && chown -R application:application /app && chmod -R u+rwX,g+rX,o-rwx storage bootstrap/cache public/uploads
+RUN mkdir -p storage/logs storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache public/uploads && chown -R application:application /app && chmod -R u+rwX,g+rX,o-rwx storage bootstrap/cache && chmod -R u=rwX,go=rX public/uploads
 STOPSIGNAL SIGTERM
 CMD ["supervisord"]
