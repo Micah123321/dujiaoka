@@ -307,7 +307,7 @@ docker compose --env-file .env.compose ps -a
 docker compose --env-file .env.compose logs --tail=200 web mysql redis
 docker inspect --format '{{json .State.Health}}' "$(docker compose --env-file .env.compose ps -q web)"
 docker compose --env-file .env.compose exec --user application web php artisan migrate:status
-docker compose --env-file .env.compose exec web supervisorctl status
+docker compose --env-file .env.compose exec web supervisorctl -c /opt/docker/etc/supervisor.conf status
 docker compose --env-file .env.compose exec --user application web tail -n 100 /app/storage/logs/scheduler.log
 docker compose --env-file .env.compose exec web sh -c 'test -s /data/.env && test -f /data/install.lock && test -L /app/.env && test -L /app/install.lock'
 ```

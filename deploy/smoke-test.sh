@@ -53,7 +53,37 @@ curl --fail --silent --show-error "$url/uploads/ci-persistence.txt" | grep -qx p
 curl --fail --silent --show-error "$url/" > /dev/null
 curl --fail --silent --show-error "$url/admin/auth/login" > /dev/null
 curl --fail --silent --show-error "$url/assets/modern/manifest.json" > /dev/null
-docker compose exec -T web supervisorctl status dujiaoka-queue | grep -q RUNNING
-docker compose exec -T web supervisorctl status cron:crond | grep -q RUNNING
+for service in dujiaoka-queue cron:crond; do
+    docker compose exec -T web sh -c '
+        attempt=0
+        while :; do
+            status=$(supervisorctl -c /opt/docker/etc/supervisor.conf status "$1" || true)
+            case "$status" in
+                *" RUNNING "*) printf "%s\n" "$status"; exit 0 ;;
+                *FATAL*|*BACKOFF*) printf "%s\n" "$status" >&2; exit 1 ;;
+            esac
+            attempt=$((attempt + 1))
+            if [ "$attempt" -ge 30 ]; then
+                printf "Service did not start: %s\n" "$status" >&2
+                exit 1
+            fi
+            sleep 1
+        done
+    ' sh "$service"
+done
 docker compose exec -T --user application web php artisan schedule:run --no-interaction
-echo 'PASS: install, migrations, HTTP, assets, queue, cron and volume persistence.'
+# Require an actual daemon tick in this fresh volume, in addition to manual scheduling.
+docker compose exec -T web sh -c '
+    attempt=0
+    until grep -q "orders:expire" /app/storage/logs/scheduler.log 2>/dev/null; do
+        attempt=$((attempt + 1))
+        if [ "$attempt" -ge 40 ]; then
+            echo "Cron did not execute orders:expire within 80 seconds." >&2
+            exit 1
+        fi
+        sleep 2
+    done
+    grep -q DONE /app/storage/logs/scheduler.log
+    ! grep -q FAIL /app/storage/logs/scheduler.log
+'
+echo 'PASS: install, migrations, HTTP, assets, queue, real cron tick and volume persistence.'
