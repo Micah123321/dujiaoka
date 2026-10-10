@@ -1,0 +1,11 @@
+<script setup lang="ts">
+import { ref } from 'vue';
+import type { OrderData } from '../types';
+import { copyText, money, safeUrl } from '../utils';
+const props = defineProps<{ order: OrderData; checkout?: boolean }>();
+const info = ref<HTMLTextAreaElement>();
+const copyStatus = ref('');
+const status: Record<number,string> = { '-1':'已过期', 1:'待支付', 2:'待处理', 3:'处理中', 4:'已完成', 5:'失败', 6:'异常' };
+async function copy() { copyStatus.value = await copyText(props.order.info, info.value) ? '已复制到剪贴板' : '请选中文本手动复制'; }
+</script>
+<template><article class="panel order-card"><div class="section-head"><div><p class="eyebrow">{{ checkout ? '核对订单，完成支付' : '订单详情' }}</p><h2>{{ order.title }}</h2></div><span class="badge static">{{ status[order.status] || '状态待确认' }}</span></div><dl class="order-facts"><div><dt>订单编号</dt><dd>{{ order.sn }}</dd></div><div><dt>创建时间</dt><dd>{{ order.created }}</dd></div><div><dt>接收邮箱</dt><dd>{{ order.email }}</dd></div><div><dt>购买数量</dt><dd>{{ order.quantity }}</dd></div><div><dt>交付方式</dt><dd>{{ order.type === 1 ? '自动发货' : '人工处理' }}</dd></div><div><dt>支付方式</dt><dd>{{ order.payName || '—' }}</dd></div><div v-if="checkout"><dt>商品单价</dt><dd>¥{{ money(order.goodsPrice) }}</dd></div><div v-if="order.coupon"><dt>优惠码</dt><dd>{{ order.coupon }}</dd></div><div v-if="Number(order.couponDiscount) > 0"><dt>优惠码折扣</dt><dd>−¥{{ money(order.couponDiscount) }}</dd></div><div v-if="Number(order.wholesaleDiscount) > 0"><dt>批发折扣</dt><dd>−¥{{ money(order.wholesaleDiscount) }}</dd></div></dl><div class="total"><span>订单金额</span><strong class="price">¥{{ money(order.price) }}</strong></div><a v-if="order.status === 1 && order.payUrl" class="primary full" :href="safeUrl(order.payUrl)">立即支付 →</a><div v-if="order.info" class="delivery"><label :for="'info-' + order.sn">{{ checkout ? '订单附加信息' : '商品 / 交付信息' }}</label><textarea :id="'info-' + order.sn" ref="info" :value="order.info" readonly rows="6" spellcheck="false"></textarea><button class="secondary" type="button" @click="copy">复制内容</button><span class="small muted" role="status">{{ copyStatus }}</span></div><p v-else-if="!checkout" class="muted">{{ order.status === 1 ? '支付完成后，可在这里查看交付内容。' : '暂无交付内容，请稍后刷新或联系店主。' }}</p></article></template>
