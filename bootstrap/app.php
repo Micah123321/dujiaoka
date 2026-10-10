@@ -15,6 +15,14 @@ $app = new Illuminate\Foundation\Application(
     $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
 );
 
+// Keep the discovered provider name while avoiding its PHP 8.5 compile-time cast warning.
+if (PHP_VERSION_ID >= 80500 && version_compare($app->version(), '13.0.0', '>=')) {
+    $captchaProvider = 'Mews\\Captcha\\CaptchaServiceProvider';
+    if (!class_exists($captchaProvider, false)) {
+        require __DIR__ . '/compat/captcha-service-provider.php';
+    }
+}
+
 /*
 |--------------------------------------------------------------------------
 | Bind Important Interfaces

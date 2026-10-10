@@ -9,6 +9,7 @@
 
 namespace App\Models;
 
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 
 class BaseModel extends Model
@@ -19,6 +20,12 @@ class BaseModel extends Model
 
     const AUTOMATIC_DELIVERY = 1; // 自动发货
     const MANUAL_PROCESSING = 2; // 人工处理
+
+    // Preserve the local clock shown by legacy grids and serialized storefront data.
+    protected function serializeDate(DateTimeInterface $date)
+    {
+        return $date->format('Y-m-d H:i:s');
+    }
 
     /**
      * map

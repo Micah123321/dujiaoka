@@ -8,34 +8,30 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^7.2.5|^8.0",
-        "amrshawky/laravel-currency": "^4.0",
-        "dcat/easy-excel": "^1.0",
-        "dcat/laravel-admin": "2.*",
-        "fideloper/proxy": "^4.4",
-        "germey/geetest": "^3.1",
+        "php": "^8.4",
         "jenssegers/agent": "^2.6",
-        "laravel/framework": "^6.20.26",
-        "laravel/tinker": "^2.5",
+        "laravel/framework": "^13.0",
+        "laravel/tinker": "^3.0",
         "mews/captcha": "^3.2",
-        "paypal/rest-api-sdk-php": "^1.14",
         "simplesoftwareio/simple-qrcode": "2.0.0",
-        "stripe/stripe-php": "^7.84",
-        "xhat/payjs-laravel": "^1.6",
-        "yansongda/pay": "^2.10"
+        "stripe/stripe-php": "^22.0",
+        "yansongda/pay": "^3.7",
+        "dcat-x/laravel-admin": "^2.0",
+        "ext-bcmath": "*",
+        "ext-dom": "*",
+        "guzzlehttp/guzzle": "^7.0.1",
+        "paypal/paypal-server-sdk": "^2.4"
     },
     "require-dev": {
-        "facade/ignition": "^1.16.15",
         "fakerphp/faker": "^1.9.1",
         "mockery/mockery": "^1.0",
-        "nunomaduro/collision": "^3.0",
-        "phpunit/phpunit": "^8.5.8|^9.3.3"
+        "phpunit/phpunit": "^13.0"
     },
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
-        "platform-check": false
+        "platform-check": true
     },
     "extra": {
         "laravel": {
@@ -50,16 +46,21 @@
             "database/seeds",
             "database/factories"
         ],
-        "files":[
+        "files": [
             "app/Helpers/functions.php"
         ]
     },
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests/"
-        }
+        },
+        "exclude-from-classmap": [
+            "/tests/Integration/MySqlConcurrency/",
+            "/tests/Compatibility/Laravel12/vendor/",
+            "/tests/.runtime/"
+        ]
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true,
     "scripts": {
         "post-autoload-dump": [

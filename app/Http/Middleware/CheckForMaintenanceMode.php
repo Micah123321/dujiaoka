@@ -2,9 +2,14 @@
 
 namespace App\Http\Middleware;
 
-use Illuminate\Foundation\Http\Middleware\CheckForMaintenanceMode as Middleware;
+class_alias(
+    class_exists(\Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance::class)
+        ? \Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance::class
+        : \Illuminate\Foundation\Http\Middleware\CheckForMaintenanceMode::class,
+    __NAMESPACE__ . '\\MaintenanceMiddleware'
+);
 
-class CheckForMaintenanceMode extends Middleware
+class CheckForMaintenanceMode extends MaintenanceMiddleware
 {
     /**
      * The URIs that should be reachable while maintenance mode is enabled.

@@ -2,7 +2,7 @@
 
 namespace App\Exceptions;
 
-use Exception;
+use Throwable;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 
 class Handler extends ExceptionHandler
@@ -29,32 +29,42 @@ class Handler extends ExceptionHandler
     /**
      * Report or log an exception.
      *
-     * @param  \Exception  $exception
+     * @param  \Throwable  $exception
      * @return void
      *
-     * @throws \Exception
+     * @throws \Throwable
      */
-    public function report(Exception $exception)
+    public function report(Throwable $exception)
     {
-        parent::report($exception);
+        parent::report($this->normalizeThrowable($exception));
     }
 
     /**
      * Render an exception into an HTTP response.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \Exception  $exception
+     * @param  \Throwable  $exception
      * @return \Symfony\Component\HttpFoundation\Response
      *
-     * @throws \Exception
+     * @throws \Throwable
      */
-    public function render($request, Exception $exception)
+    public function render($request, Throwable $exception)
     {
+        $exception = $this->normalizeThrowable($exception);
         if ($exception instanceof AppException) {
-            $layout = dujiaoka_config_get('template', 'layui');
+            $layout = dujiaoka_config_get('template', 'unicorn');
             $tplPath = $layout . '/errors/error';
-            return view($tplPath, ['title' => __('dujiaoka.error_title'), 'content' => $exception->getMessage(), 'url' => ""]);
+            return response()->view($tplPath, ['title' => __('dujiaoka.error_title'), 'content' => $exception->getMessage(), 'url' => ""]);
         }
         return parent::render($request, $exception);
+    }
+
+    private function normalizeThrowable(Throwable $exception): Throwable
+    {
+        // Laravel 6 delegates to an Exception-only handler; modern versions accept Throwable.
+        if (!$exception instanceof \Exception && class_exists(\Symfony\Component\Debug\Exception\FatalThrowableError::class)) {
+            return new \Symfony\Component\Debug\Exception\FatalThrowableError($exception);
+        }
+        return $exception;
     }
 }
