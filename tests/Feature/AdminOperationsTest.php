@@ -119,6 +119,26 @@ class AdminOperationsTest extends TestCase
         }
     }
 
+    public function test_workbench_links_follow_the_browser_origin_with_a_custom_admin_prefix(): void
+    {
+        $this->admin();
+        config(['admin.route.prefix' => '/staff/control', 'admin.route.domain' => null]);
+        app('router')->group(['as' => admin_route_name('')], function () { require app_path('Admin/routes.php'); });
+
+        foreach (['https://shop.fixture.test', 'http://shop.fixture.test:55556'] as $origin) {
+            config(['admin.https' => false]);
+            $response = $this->get($origin . '/staff/control')->assertStatus(200);
+            $this->assertSame(1, preg_match('/<script[^>]*id="admin-workbench-config"[^>]*>(.*?)<\/script>/s', $response->getContent(), $matches));
+            $config = json_decode($matches[1], true, 32, JSON_THROW_ON_ERROR);
+            $this->assertSame('/staff/control/operations/overview/data', $config['endpoints']['data']);
+            $this->assertSame('/staff/control/operations/overview/action', $config['endpoints']['action']);
+            foreach (array_merge($config['navigation'], $config['management']) as $link) {
+                $this->assertStringStartsWith('/staff/control/', $link['href']);
+            }
+            $this->getJson($origin . $config['endpoints']['data'])->assertStatus(200)->assertJson(['section' => 'overview']);
+        }
+    }
+
     public function test_home_lands_on_the_first_permitted_operations_module_without_overview_data(): void
     {
         config(['admin.menu.role_bind_menu' => false]);
@@ -237,7 +257,7 @@ class AdminOperationsTest extends TestCase
         $this->assertTrue($config['canOperate']);
         $this->assertSame($this->token, $config['csrf']);
         $this->assertArrayHasKey('userName', $config);
-        $this->assertSame('http://localhost/admin/operations/overview/action', $config['endpoints']['action']);
+        $this->assertSame('/admin/operations/overview/action', $config['endpoints']['action']);
         $route = app('router')->getRoutes()->match(Request::create('/admin/operations/stripe/action', 'POST'));
         $this->assertSame(admin_api_route_name('operations.stripe.action'), $route->getName());
         $this->assertNotSame(OperationsAccess::names('stripe', 'POST'), $route->getName());

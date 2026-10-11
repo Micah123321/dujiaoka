@@ -22,9 +22,9 @@ class OperationsAccess
 
     public static function url(string $path): string
     {
-        $url = admin_url($path);
         $domain = config('admin.route.domain');
-        return $domain ? request()->getScheme() . '://' . $domain . admin_base_path($path) : $url;
+        // Same-site links must follow the browser protocol behind HTTPS proxies.
+        return $domain ? request()->getScheme() . '://' . $domain . admin_base_path($path) : admin_base_path($path);
     }
 
     public static function routeTemplate(string $section, string $method = 'GET'): Route
