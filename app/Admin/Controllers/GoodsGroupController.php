@@ -3,8 +3,10 @@
 namespace App\Admin\Controllers;
 
 use App\Admin\Actions\Post\BatchRestore;
+use App\Admin\Actions\BatchSetStatus;
 use App\Admin\Actions\Post\Restore;
 use App\Admin\Repositories\GoodsGroup;
+use App\Admin\Support\FormExperience;
 use Dcat\Admin\Form;
 use Dcat\Admin\Grid;
 use Dcat\Admin\Show;
@@ -42,6 +44,9 @@ class GoodsGroupController extends AdminController
             $grid->batchActions(function (Grid\Tools\BatchActions $batch) {
                 if (request('_scope_') == admin_trans('dujiaoka.trashed')) {
                     $batch->add(new BatchRestore(GoodsGroupModel::class));
+                } else {
+                    $batch->add(new BatchSetStatus(GoodsGroupModel::class, 1, '批量启用'));
+                    $batch->add(new BatchSetStatus(GoodsGroupModel::class, 0, '批量停用'));
                 }
             });
         });
@@ -80,10 +85,11 @@ class GoodsGroupController extends AdminController
     protected function form()
     {
         return Form::make(new GoodsGroup(), function (Form $form) {
+            FormExperience::intro($form, '商品分类', '先填写分类名称，再设置前台展示和排序；保存后可在商品中选择该分类。');
             $form->display('id');
-            $form->text('gp_name');
-            $form->switch('is_open')->default(GoodsGroupModel::STATUS_OPEN);
-            $form->number('ord')->default(1)->help(admin_trans('dujiaoka.ord'));
+            $form->text('gp_name', '分类名称')->placeholder('例如：软件授权、游戏充值')->help('用于商品分组和前台分类展示。');
+            $form->switch('is_open', '前台展示')->default(GoodsGroupModel::STATUS_OPEN)->help('开启后该分类可在前台展示。');
+            $form->number('ord', '排序')->default(1)->help(admin_trans('dujiaoka.ord'));
             $form->display('created_at');
             $form->display('updated_at');
             $form->disableViewButton();

@@ -1,53 +1,108 @@
-/* Scoped to the admin body; native Dcat permissions and CRUD markup stay intact. */
-body.dujiaoka-admin { background:#f7f8f2; color:#253c30; font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif; }
-.dujiaoka-admin .app-content,.dujiaoka-admin .content-wrapper { background:#f7f8f2 !important; }
+/* Native Dcat widgets and Vue islands consume the palette registered by AdminTheme. */
+body.dujiaoka-admin { background:var(--admin-background,#f7f8f2); color:var(--admin-ink,#253c30); font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif; }
+body.dujiaoka-admin.dark-mode { color-scheme:dark; }
+body.dujiaoka-admin[class] .app-content,body.dujiaoka-admin[class] .content-wrapper { background:var(--admin-background) !important; }
 .dujiaoka-admin .content-wrapper { transition:none !important; }
 body.dujiaoka-admin.navbar-fixed-top .app-content { padding-top:64px !important; }
 .dujiaoka-admin .content-header { padding-bottom:10px; }
-.dujiaoka-admin .content-header h1 { color:#26422f; font-size:23px; font-weight:600; letter-spacing:-.6px; }
-.dujiaoka-admin .content-header h1 small { color:#97a38e; font-weight:400; font-size:12px; }
-.dujiaoka-admin .main-sidebar { background:#1a302b !important; border-right:1px solid #1a302b; box-shadow:none !important; }
-.dujiaoka-admin .main-sidebar .brand-link { color:#f1f0dc !important; background:#1a302b !important; border-color:#ffffff0d !important; height:72px; display:flex; align-items:center; font-weight:550; letter-spacing:.5px; }
+body.dujiaoka-admin[class] .content-header h1 { color:var(--admin-ink); font-size:23px; font-weight:600; letter-spacing:-.6px; }
+.dujiaoka-admin .content-header h1 small { color:var(--admin-muted); font-weight:400; font-size:12px; }
+body.dujiaoka-admin[class] a { color:var(--admin-link); }
+body.dujiaoka-admin[class] a:hover { color:var(--admin-link); }
+body.dujiaoka-admin[class] .text-primary { color:var(--admin-link) !important; }
+body.dujiaoka-admin[class] .text-muted { color:var(--admin-muted) !important; }
+body.dujiaoka-admin[class] .main-sidebar { background:var(--admin-sidebar) !important; border-right:1px solid var(--admin-sidebar); box-shadow:none !important; }
+body.dujiaoka-admin[class] .main-sidebar .brand-link { color:var(--admin-sidebar-selected) !important; background:var(--admin-sidebar) !important; border-color:#ffffff0d !important; height:72px; display:flex; align-items:center; font-weight:550; letter-spacing:.5px; }
 .dujiaoka-admin .main-sidebar .brand-link img { border-radius:8px; }
 .dujiaoka-admin .main-sidebar .nav-sidebar { padding:12px 10px; }
-.dujiaoka-admin .main-sidebar .nav-sidebar .nav-link { color:#a6b7aa !important; border-radius:7px; margin:3px 0; padding:11px 13px; font-size:12px; transition:background .15s; }
-.dujiaoka-admin .main-sidebar .nav-sidebar .nav-link:hover { background:#ffffff09 !important; color:#e1ebda !important; }
-.dujiaoka-admin .main-sidebar .nav-sidebar .nav-link.active { background:#345b48 !important; color:#e3edce !important; box-shadow:none !important; }
-.dujiaoka-admin .main-sidebar .nav-treeview { background:transparent !important; padding-left:9px; }
-.dujiaoka-admin .main-sidebar .nav-icon,.dujiaoka-admin .main-sidebar .fa-fw { color:inherit !important; opacity:.8; }
-body.dujiaoka-admin .header-navbar.navbar.navbar-with-menu,.dujiaoka-admin .main-header { border-bottom:1px solid #e7ece0; background:#fffefa !important; box-shadow:none !important; }
-body.dujiaoka-admin .header-navbar.navbar.navbar-with-menu .nav-link,.dujiaoka-admin .main-header .nav-link { color:#65765d !important; }
-.dujiaoka-admin .main-sidebar .main-header.navbar { background:#1a302b !important; color:#f1f0dc !important; }
-.dujiaoka-admin .main-sidebar .main-header.navbar a { color:#f1f0dc !important; }
-body.dujiaoka-admin .main-sidebar .navbar-header { background:#1a302b !important; }
-body.dujiaoka-admin .header-navbar .user-nav,.dujiaoka-admin .header-navbar .user-nav .user-name,.dujiaoka-admin .header-navbar .user-nav i { color:#65765d !important; }
-.dujiaoka-admin .main-sidebar .nav-sidebar .nav-link.active { color:#e3edce !important; }
-.dujiaoka-admin .card { border:1px solid #e5ebdd; border-radius:11px; box-shadow:0 3px 10px #132d1803 !important; }
-.dujiaoka-admin .card-header { border-bottom-color:#edf0e5; padding:19px 22px; }
-.dujiaoka-admin .card-title { font-weight:550; color:#345333; }
+body.dujiaoka-admin[class] .main-sidebar .nav-link { color:var(--admin-sidebar-ink) !important; border-radius:7px; margin:3px 0; padding:11px 13px; font-size:12px; transition:background .15s; }
+body.dujiaoka-admin[class] .main-sidebar .nav-link:hover { background:#ffffff09 !important; color:var(--admin-sidebar-selected) !important; }
+body.dujiaoka-admin[class] .main-sidebar .nav-link.active { background:var(--admin-sidebar-active) !important; color:var(--admin-sidebar-selected) !important; box-shadow:none !important; }
+body.dujiaoka-admin[class] .main-sidebar .nav-link :is(i,p,span) { color:inherit !important; }
+body.dujiaoka-admin[class] .main-sidebar .nav-treeview { background:transparent !important; padding-left:9px; }
+.dujiaoka-admin .main-sidebar .nav-icon,.dujiaoka-admin .main-sidebar .fa-fw { color:inherit !important; opacity:.9; }
+body.dujiaoka-admin[class] .header-navbar.navbar.navbar-with-menu,.dujiaoka-admin .main-header { border-bottom:1px solid var(--admin-line); background:var(--admin-surface) !important; box-shadow:none !important; }
+body.dujiaoka-admin[class] .header-navbar.navbar.navbar-with-menu .nav-link,.dujiaoka-admin .main-header .nav-link { color:var(--admin-muted) !important; }
+body.dujiaoka-admin[class] .main-sidebar .main-header.navbar,body.dujiaoka-admin[class] .main-sidebar .navbar-header { background:var(--admin-sidebar) !important; color:var(--admin-sidebar-selected) !important; }
+body.dujiaoka-admin[class] .main-sidebar .main-header.navbar a { color:var(--admin-sidebar-selected) !important; }
+body.dujiaoka-admin[class] .header-navbar .user-nav,body.dujiaoka-admin[class] .header-navbar .user-nav :is(.user-name,i) { color:var(--admin-muted) !important; }
+body.dujiaoka-admin[class] :is(.card,.box,.box-body,.box-header,.card-body,.modal-content,.modal-header,.modal-footer,.layui-layer,.layui-layer-content) { background:var(--admin-surface); color:var(--admin-ink); border-color:var(--admin-line); }
+body.dujiaoka-admin[class] .card { border:1px solid var(--admin-line); border-radius:11px; box-shadow:0 3px 10px #132d1803 !important; }
+.dujiaoka-admin .card-header { border-bottom-color:var(--admin-line); padding:19px 22px; }
+body.dujiaoka-admin[class] .card-title { font-weight:550; color:var(--admin-ink); }
 .dujiaoka-admin .card-body { padding:22px; }
 .dujiaoka-admin .box { border-radius:11px; box-shadow:none; }
-.dujiaoka-admin .table thead th { background:#fafbf5; color:#859579; font-size:11px; border-color:#e8edde; }
-.dujiaoka-admin .table td { border-color:#eef1e8; padding-top:15px; padding-bottom:15px; }
-.dujiaoka-admin .btn { border-radius:6px; box-shadow:none !important; font-size:12px; }
-.dujiaoka-admin .btn-primary,.dujiaoka-admin .bg-primary { background:#267c64 !important; border-color:#267c64 !important; }
-.dujiaoka-admin .btn-primary:hover { background:#1d6552 !important; border-color:#1d6552 !important; }
-.dujiaoka-admin .btn-outline-primary { color:#267c64; border-color:#91baa6; }
-.dujiaoka-admin .btn-outline-primary:hover { background:#267c64; color:white; }
-.dujiaoka-admin .btn-danger { background:#b6694f; border-color:#b6694f; }
-.dujiaoka-admin .btn-success { background:#51855a; border-color:#51855a; }
-.dujiaoka-admin .form-control { border-color:#dfe7d7; border-radius:6px; color:#3f5c35; }
-.dujiaoka-admin .form-control:focus { border-color:#7aa47e; box-shadow:0 0 0 3px #edf3e7; }
-.dujiaoka-admin .select2-container--default .select2-selection--single { border-color:#dfe7d7; border-radius:6px; }
-.dujiaoka-admin .pagination .page-item.active .page-link { background:#267c64; border-color:#267c64; }
-.dujiaoka-admin .pagination .page-link { color:#5c7a4a; border-color:#e3eada; }
-.dujiaoka-admin .main-footer { border-top-color:#e7ecdf; background:#f7f8f2; color:#a5b097; font-size:10px; }
-.dujiaoka-admin .login-page { background:radial-gradient(ellipse at 15% 0,#e3ecd9 0,transparent 55%),#f8f8f0 !important; }
+body.dujiaoka-admin[class] .table { color:var(--admin-ink); background:var(--admin-surface); }
+body.dujiaoka-admin[class] .table thead th { background:var(--admin-surface-soft); color:var(--admin-muted); font-size:12px; font-weight:600; border-color:var(--admin-line); }
+body.dujiaoka-admin[class] .table tbody,body.dujiaoka-admin[class] .table tbody tr { background:var(--admin-surface) !important; color:var(--admin-ink) !important; }
+body.dujiaoka-admin[class] .table td { background:inherit !important; color:var(--admin-ink) !important; border-color:var(--admin-line); padding-top:15px; padding-bottom:15px; }
+body.dujiaoka-admin[class] .table-hover tbody tr:hover { background:var(--admin-primary-soft) !important; }
+body.dujiaoka-admin[class] :is(.dcat-box,.box,.box-header,.box-body,.box-footer) { background:var(--admin-surface) !important; color:var(--admin-ink) !important; }
+body.dujiaoka-admin[class] .navbar-header .navbar-brand,body.dujiaoka-admin[class] .navbar-header .navbar-brand :is(a,span) { color:var(--admin-sidebar-selected) !important; }
+body.dujiaoka-admin[class] .table-hover tbody tr:hover,body.dujiaoka-admin[class] .table tr.selected { background:var(--admin-primary-soft); }
+body.dujiaoka-admin[class] .btn { border-radius:6px; box-shadow:none !important; font-size:12px; font-weight:500; }
+/* The create tool is both btn-primary and btn-outline: set foreground as well as background. */
+body.dujiaoka-admin[class] .btn.btn-primary,body.dujiaoka-admin[class] .bg-primary { color:var(--admin-on-primary) !important; background:var(--admin-primary) !important; border-color:var(--admin-primary) !important; }
+body.dujiaoka-admin[class] .btn.btn-primary :is(i,span),body.dujiaoka-admin[class] .btn :is(i,svg) { color:inherit !important; }
+body.dujiaoka-admin[class] .btn.btn-primary:is(:hover,:focus,:active),body.dujiaoka-admin[class] .btn.btn-primary.active { color:var(--admin-on-primary) !important; background:var(--admin-primary-hover) !important; border-color:var(--admin-primary-hover) !important; }
+body.dujiaoka-admin[class] .btn.btn-outline-primary { color:var(--admin-link) !important; background:transparent !important; border-color:var(--admin-primary) !important; }
+body.dujiaoka-admin[class] .btn.btn-outline-primary:is(:hover,:focus,:active) { background:var(--admin-primary) !important; color:var(--admin-on-primary) !important; }
+body.dujiaoka-admin[class] .btn:is(.btn-default,.btn-white,.btn-light,.btn-secondary) { background:var(--admin-surface-soft) !important; color:var(--admin-ink) !important; border-color:var(--admin-line) !important; }
+body.dujiaoka-admin[class] .btn:is(.btn-default,.btn-white,.btn-light,.btn-secondary):is(:hover,:focus) { background:var(--admin-primary-soft) !important; color:var(--admin-link) !important; }
+body.dujiaoka-admin[class] .btn.btn-danger { background:var(--admin-danger-soft) !important; color:var(--admin-danger) !important; border-color:var(--admin-danger) !important; }
+body.dujiaoka-admin[class] .btn.btn-success { background:var(--admin-primary) !important; color:var(--admin-on-primary) !important; border-color:var(--admin-primary) !important; }
+body.dujiaoka-admin[class] .btn.disabled,body.dujiaoka-admin[class] .btn:disabled { opacity:.55; cursor:not-allowed; }
+body.dujiaoka-admin[class] :is(button,a,input,select,textarea,[tabindex]):focus-visible { outline:2px solid var(--admin-focus); outline-offset:3px; }
+body.dujiaoka-admin[class] :is(.form-control,.input-group-text,.select2-selection--single,.select2-selection--multiple,.select2-dropdown,.select2-search__field,.editable-input select) { background:var(--admin-input) !important; color:var(--admin-ink) !important; border-color:var(--admin-line) !important; border-radius:6px; }
+body.dujiaoka-admin[class] .form-control:focus { border-color:var(--admin-primary) !important; box-shadow:0 0 0 3px var(--admin-primary-soft) !important; }
+body.dujiaoka-admin[class] :is(input,textarea)::placeholder { color:var(--admin-muted); opacity:.85; }
+body.dujiaoka-admin[class] :is(.form-control:disabled,.form-control[readonly],.select2-container--disabled .select2-selection) { background:var(--admin-surface-soft) !important; color:var(--admin-muted) !important; }
+body.dujiaoka-admin[class] .select2-container .select2-selection__rendered { color:var(--admin-ink) !important; }
+body.dujiaoka-admin[class] .select2-container .select2-selection__arrow b { border-top-color:var(--admin-muted) !important; }
+body.dujiaoka-admin[class] .select2-results__option { color:var(--admin-ink); background:var(--admin-surface); }
+body.dujiaoka-admin[class] .select2-results__option[aria-selected=true],body.dujiaoka-admin[class] .select2-selection__choice { color:var(--admin-link) !important; background:var(--admin-primary-soft) !important; border-color:var(--admin-line) !important; }
+body.dujiaoka-admin[class] .select2-results__option--highlighted[aria-selected] { color:var(--admin-on-primary) !important; background:var(--admin-primary) !important; }
+body.dujiaoka-admin[class] .pagination .page-link { color:var(--admin-link) !important; background:var(--admin-surface-soft) !important; border-color:var(--admin-line) !important; }
+body.dujiaoka-admin[class] .pagination .page-item.active .page-link { color:var(--admin-on-primary) !important; background:var(--admin-primary) !important; border-color:var(--admin-primary) !important; }
+body.dujiaoka-admin[class] .pagination .page-item.disabled .page-link { color:var(--admin-muted) !important; opacity:.5; }
+body.dujiaoka-admin[class] input[type=checkbox] { accent-color:var(--admin-primary); }
+body.dujiaoka-admin[class] .vs-radio-con input:checked ~ .vs-radio .vs-radio--circle { background:var(--admin-primary) !important; }
+body.dujiaoka-admin[class] .vs-checkbox-con input:checked ~ .vs-checkbox .vs-checkbox--check { background:var(--admin-primary) !important; border-color:var(--admin-primary) !important; }
+body.dujiaoka-admin[class] input[type=checkbox] + .switchery { background:var(--admin-surface-soft) !important; border-color:var(--admin-line) !important; box-shadow:none !important; }
+body.dujiaoka-admin[class] input[type=checkbox]:checked + .switchery { background:var(--admin-primary) !important; border-color:var(--admin-primary) !important; box-shadow:inset 0 0 0 11px var(--admin-primary) !important; }
+body.dujiaoka-admin[class] .table tr:has(.checkbox-grid-column input:checked) { background:var(--admin-primary-soft) !important; }
+body.dujiaoka-admin[class] .vs-checkbox-con input:checked ~ .vs-checkbox { border-color:var(--admin-primary) !important; }
+body.dujiaoka-admin[class] .vs-checkbox-con input:checked ~ .vs-checkbox .vs-icon { color:var(--admin-on-primary) !important; }
+body.dujiaoka-admin[class] .switchery > small { background:var(--admin-on-primary) !important; }
+body.dujiaoka-admin[class] input[type=checkbox]:disabled + .switchery { opacity:.5; cursor:not-allowed; }
+body.dujiaoka-admin[class] .select2-container .select2-selection__choice__remove { color:inherit !important; }
+body.dujiaoka-admin[class] .select2-search__field:focus { border-color:var(--admin-primary) !important; }
+body.dujiaoka-admin[class] .bootstrap-datetimepicker-widget :is(td,span,i):is(.active):not(.disabled) { background:var(--admin-primary) !important; color:var(--admin-on-primary) !important; }
+body.dujiaoka-admin[class] .bootstrap-datetimepicker-widget :is(td,span):hover { background:var(--admin-primary-soft) !important; color:var(--admin-link) !important; }
+body.dujiaoka-admin[class] .bootstrap-datetimepicker-widget td.today::before { border-bottom-color:var(--admin-primary) !important; }
+body.dujiaoka-admin[class] .web-uploader.disabled { background:var(--admin-surface-soft) !important; }
+body.dujiaoka-admin[class] .tox :is(.tox-editor-header,.tox-toolbar,.tox-toolbar__primary,.tox-toolbar__overflow,.tox-menubar,.tox-statusbar,.tox-menu,.tox-collection__item,.tox-toolbar-overlord) { background:var(--admin-surface) !important; color:var(--admin-ink) !important; border-color:var(--admin-line) !important; }
+body.dujiaoka-admin[class] .tox :is(.tox-mbtn,.tox-tbtn,.tox-statusbar__path-item,.tox-statusbar__wordcount,.tox-collection__item-label,.tox-statusbar__branding a) { color:var(--admin-ink) !important; }
+body.dujiaoka-admin[class] .tox :is(.tox-tbtn,.tox-collection__item-icon) svg { fill:var(--admin-ink) !important; }
+body.dujiaoka-admin[class] .tox :is(.tox-tbtn,.tox-mbtn):hover,body.dujiaoka-admin[class] .tox .tox-collection__item--active { background:var(--admin-primary-soft) !important; }
+body.dujiaoka-admin[class] .tox.tox-tinymce { border-color:var(--admin-line) !important; border-radius:7px; }
+body.dujiaoka-admin[class] :is(.dropdown-menu,.dropdown-item,.layui-layer-title,.layui-layer-btn,.popover,.popover-header,.popover-body,.daterangepicker,.datepicker,.bootstrap-datetimepicker-widget) { background:var(--admin-surface) !important; color:var(--admin-ink) !important; border-color:var(--admin-line) !important; }
+body.dujiaoka-admin[class] .swal2-popup { background:var(--admin-surface) !important; color:var(--admin-ink) !important; border:1px solid var(--admin-line); border-radius:12px; }
+body.dujiaoka-admin[class] .swal2-title { color:var(--admin-ink) !important; }
+body.dujiaoka-admin[class] :is(.swal2-content,.swal2-html-container) { color:var(--admin-muted) !important; }
+body.dujiaoka-admin[class] .dropdown-menu { border:1px solid var(--admin-line); border-radius:9px; box-shadow:0 8px 26px #10251d14; padding:6px; }
+body.dujiaoka-admin[class] .dropdown-item { border-radius:5px; font-size:13px; }
+body.dujiaoka-admin[class] .dropdown-item:is(:hover,:focus,.active) { background:var(--admin-primary-soft) !important; color:var(--admin-link) !important; }
+body.dujiaoka-admin[class] :is(.layui-layer-btn0,.daterangepicker td.active,.datepicker table tr td.active,.bootstrap-datetimepicker-widget table td.active) { background:var(--admin-primary) !important; color:var(--admin-on-primary) !important; border-color:var(--admin-primary) !important; }
+body.dujiaoka-admin[class] .label-primary,body.dujiaoka-admin[class] .badge-primary { background:var(--admin-primary-soft) !important; color:var(--admin-link) !important; }
+body.dujiaoka-admin[class] .webuploader-pick { background:var(--admin-primary) !important; color:var(--admin-on-primary) !important; border-radius:6px; }
+body.dujiaoka-admin[class] .main-footer { border-top-color:var(--admin-line); background:var(--admin-background); color:var(--admin-muted); font-size:10px; }
+body.dujiaoka-admin[class] .login-page { background:var(--admin-background) !important; }
 .dujiaoka-admin .login-box { width:390px; max-width:calc(100vw - 36px); }
-.dujiaoka-admin .login-box .card { border:1px solid #dfe8d4; border-radius:15px; box-shadow:0 18px 60px #2243170a !important; }
-.dujiaoka-admin .login-card-body { padding:34px 30px; border-radius:15px; background:#fffefa; }
-.dujiaoka-admin .login-logo { font-size:26px; font-weight:600; letter-spacing:-.7px; color:#28462a; }
-.dujiaoka-admin .login-box-msg { color:#93a17d; font-size:12px; }
+.dujiaoka-admin .login-box .card { border:1px solid var(--admin-line); border-radius:15px; box-shadow:0 18px 60px #2243170a !important; }
+body.dujiaoka-admin[class] .login-card-body { padding:34px 30px; border-radius:15px; background:var(--admin-surface); }
+.dujiaoka-admin .login-logo { font-size:26px; font-weight:600; letter-spacing:-.7px; color:var(--admin-ink); }
+.dujiaoka-admin .login-box-msg { color:var(--admin-muted); font-size:12px; }
 @media(min-width:992px) {
   .dujiaoka-admin .content-wrapper { padding:22px 26px; }
   .dujiaoka-admin:not(.horizontal-menu):not(.sidebar-collapse) .app-content > .content-wrapper { margin-left:210px !important; }
@@ -55,3 +110,45 @@ body.dujiaoka-admin .header-navbar .user-nav,.dujiaoka-admin .header-navbar .use
 }
 @media(max-width:700px) { .dujiaoka-admin .content-wrapper { padding:13px 14px; } .dujiaoka-admin .card-body { padding:16px; } }
 .dujiaoka-admin.dujiaoka-workbench .content-header { display:none; }
+.dujiaoka-admin form .box-header { border-bottom:1px solid var(--admin-line); padding:18px 24px !important; }
+body.dujiaoka-admin[class] .nav-tabs { display:flex; flex-wrap:wrap; gap:6px; background:var(--admin-surface-soft); border-bottom:1px solid var(--admin-line); margin:0 !important; padding:14px 20px !important; }
+body.dujiaoka-admin[class] .nav-tabs .nav-link { color:var(--admin-muted) !important; font-size:13px; border:0; border-radius:8px; padding:11px 17px; }
+body.dujiaoka-admin[class] .nav-tabs .nav-link.active { color:var(--admin-link) !important; background:var(--admin-primary-soft) !important; font-weight:650; box-shadow:none; }
+.dujiaoka-admin form .tab-content,.dujiaoka-admin form .fields-group { padding:22px 26px !important; }
+.dujiaoka-admin form .tab-content .fields-group { padding:0 !important; }
+.dujiaoka-admin form .form-group { margin-bottom:24px; }
+body.dujiaoka-admin[class] form .control-label { color:var(--admin-ink); font-size:13px; line-height:1.5; font-weight:600; }
+body.dujiaoka-admin[class] form .help-block { color:var(--admin-muted); font-size:12px; line-height:1.85; margin-top:8px; }
+.dujiaoka-admin form .form-control { min-height:42px; font-size:13px; }
+.dujiaoka-admin form textarea.form-control { line-height:1.65; padding:12px; }
+.dujiaoka-admin form .select2-container .select2-selection--single { height:42px; }
+.dujiaoka-admin form .select2-container .select2-selection--single .select2-selection__rendered { line-height:40px; }
+.dujiaoka-admin form .select2-container .select2-selection--single .select2-selection__arrow { height:40px; }
+body.dujiaoka-admin[class] form .box-footer { padding:18px 24px; border-top:1px solid var(--admin-line); background:var(--admin-surface-soft); }
+.dujiaoka-admin .af-intro { margin:0 0 25px; padding:22px 24px; background:var(--admin-primary-soft); border:1px solid var(--admin-line); border-radius:12px; }
+.dujiaoka-admin .af-eyebrow { color:var(--admin-muted); font-size:11px; letter-spacing:1px; }
+.dujiaoka-admin .af-intro h2 { color:var(--admin-ink); font-size:23px; font-weight:650; margin:7px 0 9px; }
+.dujiaoka-admin .af-intro p,.dujiaoka-admin .af-section p { color:var(--admin-muted); font-size:13px; line-height:1.8; margin:0; }
+.dujiaoka-admin .af-required-note { display:block; font-size:11px; color:var(--admin-muted); margin-top:13px; }
+.dujiaoka-admin .af-section { margin:4px 0 26px; padding:0 0 17px; border-bottom:1px solid var(--admin-line); }
+.dujiaoka-admin .af-section h3 { font-size:18px; color:var(--admin-ink); margin:0 0 8px; font-weight:600; }
+.dujiaoka-admin .admin-status-ready { color:var(--admin-link); background:var(--admin-primary-soft); padding:5px 8px; }
+.dujiaoka-admin .admin-status-pending { color:var(--admin-warning); background:var(--admin-warning-soft); padding:5px 8px; }
+.dujiaoka-admin .admin-selection-toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 14px; margin:0 0 12px; background:var(--admin-primary-soft); border:1px solid var(--admin-line); border-radius:8px; font-size:13px; }
+.dujiaoka-admin .admin-selection-toolbar > button { margin-left:auto; scroll-margin-top:90px; }
+.dujiaoka-admin .admin-batch-label { display:inline; margin-right:6px; }
+.dujiaoka-admin .admin-batch-label ~ .selected { display:none !important; }
+.dujiaoka-admin .admin-selection-toolbar[hidden] { display:none; }
+@media(max-width:991px) {
+  body.dujiaoka-admin:not(.horizontal-menu) .header-navbar.navbar-with-menu { left:0 !important; margin-left:0 !important; width:100% !important; }
+  body.dujiaoka-admin:not(.horizontal-menu) .main-sidebar { left:0 !important; margin-left:0 !important; transform:translateX(-100%) !important; transition:transform .2s ease !important; }
+  body.dujiaoka-admin.sidebar-open:not(.horizontal-menu) .main-sidebar { transform:translateX(0) !important; }
+}
+@media(max-width:767px) {
+  .dujiaoka-admin form .tab-content,.dujiaoka-admin form .fields-group { padding:17px 14px !important; }
+  .dujiaoka-admin .nav-tabs { padding:10px !important; }
+  .dujiaoka-admin .nav-tabs .nav-link { padding:9px 10px; font-size:12px; }
+  .dujiaoka-admin .af-intro { padding:18px; }
+  .dujiaoka-admin .af-intro h2 { font-size:20px; }
+  .dujiaoka-admin form .control-label { text-align:left; margin-bottom:7px; }
+}

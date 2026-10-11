@@ -7,6 +7,7 @@ use App\Admin\Actions\Post\Restore;
 use App\Admin\Forms\ImportCarmis;
 use App\Admin\Repositories\Carmis;
 use App\Models\Goods;
+use App\Admin\Support\FormExperience;
 use Dcat\Admin\Form;
 use Dcat\Admin\Grid;
 use Dcat\Admin\Layout\Content;
@@ -91,15 +92,17 @@ class CarmisController extends AdminController
     protected function form()
     {
         return Form::make(new Carmis(), function (Form $form) {
+            FormExperience::intro($form, '单条卡密', '选择自动发货商品并填写一条完整卡密；大量卡密请使用批量导入。');
             $form->display('id');
-            $form->select('goods_id')->options(
+            $form->select('goods_id', '所属商品')->options(
                 Goods::query()->where('type', Goods::AUTOMATIC_DELIVERY)->pluck('gd_name', 'id')
-            )->required();
-            $form->radio('status')
+            )->placeholder('请选择自动发货商品')->help('卡密将用于该商品的自动发货。')->required();
+            FormExperience::section($form, '销售设置与内容', '普通卡密售出后退出可售库存，循环卡密可重复出售同一内容。');
+            $form->radio('status', '销售状态')
                 ->options(CarmisModel::getStatusMap())
-                ->default(CarmisModel::STATUS_UNSOLD);
-            $form->switch('is_loop')->default(false);
-            $form->textarea('carmi')->required();
+                ->default(CarmisModel::STATUS_UNSOLD)->help('新增通常选择未售出；修改已售卡密前请核对订单。');
+            $form->switch('is_loop', '循环出售')->default(false)->help('开启后同一条卡密可重复出售；请仅用于允许重复交付的内容。');
+            $form->textarea('carmi', '卡密内容')->rows(6)->placeholder('例如：兑换码，或账号与密码的完整交付内容')->help('此处整体保存为一条卡密，多行内容也属于同一条。')->required();
             $form->display('created_at');
             $form->display('updated_at');
         });

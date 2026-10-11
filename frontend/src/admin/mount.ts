@@ -1,6 +1,9 @@
 import { createApp, type App } from 'vue';
 import Workbench from './Workbench.vue';
 import { parseConfig } from './api';
+import { createFormGuideBridge } from './form-guide';
+import { createGridSelectionBridge } from './grid-selection';
+import { createEditorThemeBridge } from './editor-theme';
 
 export interface WorkbenchBridge { refresh: () => void; dispose: () => void }
 declare global {
@@ -11,10 +14,16 @@ declare global {
 }
 export function createWorkbenchBridge(): WorkbenchBridge {
   let app: App | undefined; let root: HTMLElement | null = null; let payload = ''; let disposed = false;
+  const forms = createFormGuideBridge();
+  const grids = createGridSelectionBridge();
+  const editors = createEditorThemeBridge();
   function unmount() { app?.unmount(); app = undefined; root = null; payload = ''; }
   function refresh() {
     if (disposed) return;
     document.body?.classList.add('dujiaoka-admin');
+    forms.refresh();
+    grids.refresh();
+    editors.refresh();
     const nextRoot = document.getElementById('admin-workbench');
     document.body?.classList.toggle('dujiaoka-workbench', !!nextRoot);
     const nextPayload = document.getElementById('admin-workbench-config')?.textContent || '';
@@ -37,5 +46,5 @@ export function createWorkbenchBridge(): WorkbenchBridge {
   window.Dcat?.ready?.(refresh);
   window.Dcat?.onPjaxLoaded?.(refresh, false);
   refresh();
-  return { refresh, dispose: () => { disposed = true; observer.disconnect(); document.removeEventListener('DOMContentLoaded', refresh); document.body?.classList.remove('dujiaoka-workbench'); unmount(); } };
+  return { refresh, dispose: () => { disposed = true; forms.dispose(); grids.dispose(); editors.dispose(); observer.disconnect(); document.removeEventListener('DOMContentLoaded', refresh); document.body?.classList.remove('dujiaoka-workbench'); unmount(); } };
 }

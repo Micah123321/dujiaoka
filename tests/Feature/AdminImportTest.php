@@ -38,6 +38,12 @@ class AdminImportTest extends TestCase
             $table->timestamps();
             $table->softDeletes();
         });
+        Schema::create('goods', function (Blueprint $table) {
+            $table->increments('id');
+            $table->unsignedTinyInteger('type');
+            $table->softDeletes();
+        });
+        DB::table('goods')->insert(['id' => 17, 'type' => 1]);
         Storage::fake('public');
         Storage::fake('import-other');
         URL::forceRootUrl('http://localhost');
@@ -152,6 +158,19 @@ class AdminImportTest extends TestCase
             'goods_id' => 17,
             'remove_duplication' => 0,
         ]));
+    }
+
+    public function test_single_zero_is_a_valid_card_and_invalid_manual_or_deleted_goods_never_receive_cards(): void
+    {
+        $this->assertSuccess($this->import(['goods_id' => 17, 'carmis_list' => '0']));
+        $this->assertCards(['0']);
+        foreach ([18, 19, 9999, ['17']] as $goods) {
+            DB::table('goods')->insertOrIgnore(['id' => 18, 'type' => 2]);
+            DB::table('goods')->insertOrIgnore(['id' => 19, 'type' => 1, 'deleted_at' => date('Y-m-d H:i:s')]);
+            $result = $this->import(['goods_id' => $goods, 'carmis_list' => 'SHOULD-NOT-IMPORT']);
+            $this->assertFalse($result['status']);
+            $this->assertCards(['0']);
+        }
     }
 
     private function import(array $input): array

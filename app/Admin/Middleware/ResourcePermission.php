@@ -8,6 +8,9 @@ use App\Admin\Forms\EmailTest;
 use App\Admin\Forms\ImportCarmis;
 use App\Admin\Forms\SystemSetting;
 use App\Admin\Repositories\TransactionalRepository;
+use App\Admin\Support\BulkActionInput;
+use App\Admin\Actions\BatchSetStatus;
+use App\Admin\Actions\CloneResource;
 use App\Models\Carmis;
 use App\Models\Coupon;
 use App\Models\Emailtpl;
@@ -79,6 +82,15 @@ class ResourcePermission
                 if (strcasecmp(ltrim($class, '\\'), Restore::class) === 0
                     || strcasecmp(ltrim($class, '\\'), BatchRestore::class) === 0) {
                     self::authorizeRestore($request->get('model'), (array) $request->get('_key'));
+                } elseif ($class === BatchSetStatus::class) {
+                    $model = BulkActionInput::model($request->get('model'));
+                    $keys = BulkActionInput::keys($request->get('_key'));
+                    BulkActionInput::status($request->get('field'), $request->get('state'));
+                    self::authorizeUpdate($model, $keys);
+                } elseif ($class === CloneResource::class) {
+                    $model = BulkActionInput::model($request->get('model'), true);
+                    $keys = BulkActionInput::keys([$request->get('_key')]);
+                    if (!self::canClone($user, $model, $keys[0])) abort(403, __('admin.deny'));
                 }
             }
         }
@@ -127,6 +139,32 @@ class ResourcePermission
             }
         }
         return $request;
+    }
+
+    public static function canUpdate($user, string $model, array $keys, bool $display = false): bool
+    {
+        if (!isset(BulkActionInput::RESOURCES[$model])) return false;
+        $resource = BulkActionInput::RESOURCES[$model];
+        if (!$keys && $display) return self::allows($user, self::requestFor($resource . '/*', 'PUT'));
+        if (!$keys) return false;
+        foreach ($keys as $key) {
+            if (!self::allows($user, self::requestFor($resource . '/' . $key, 'PUT'))) return false;
+        }
+        return true;
+    }
+
+    public static function authorizeUpdate(string $model, array $keys): void
+    {
+        if (!self::canUpdate(Admin::user(), $model, $keys)) abort(403, __('admin.deny'));
+    }
+
+    public static function canClone($user, string $model, $key): bool
+    {
+        if (!in_array($model, [Goods::class, Pay::class], true) || !is_scalar($key)
+            || !preg_match('/^[1-9][0-9]*$/D', (string) $key)) return false;
+        $resource = BulkActionInput::RESOURCES[$model];
+        return self::allows($user, self::requestFor($resource . '/' . $key, 'GET'))
+            && self::allows($user, self::requestFor($resource, 'POST'));
     }
 
     public static function restoreModel($model): ?string

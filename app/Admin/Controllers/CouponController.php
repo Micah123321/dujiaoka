@@ -3,10 +3,12 @@
 namespace App\Admin\Controllers;
 
 use App\Admin\Actions\Post\BatchRestore;
+use App\Admin\Actions\BatchSetStatus;
 use App\Admin\Actions\Post\Restore;
 use App\Admin\Repositories\Coupon;
 use App\Models\Goods;
 use Dcat\Admin\Admin;
+use App\Admin\Support\FormExperience;
 use Dcat\Admin\Form;
 use Dcat\Admin\Grid;
 use Dcat\Admin\Show;
@@ -41,6 +43,9 @@ class CouponController extends AdminController
             $grid->batchActions(function (Grid\Tools\BatchActions $batch) {
                 if (request('_scope_') == admin_trans('dujiaoka.trashed')) {
                     $batch->add(new BatchRestore(CouponModel::class));
+                } else {
+                    $batch->add(new BatchSetStatus(CouponModel::class, 1, '批量启用'));
+                    $batch->add(new BatchSetStatus(CouponModel::class, 0, '批量停用'));
                 }
             });
             $grid->filter(function (Grid\Filter $filter) {
@@ -94,8 +99,9 @@ class CouponController extends AdminController
     protected function form()
     {
         return Form::make(Coupon::with('goods'), function (Form $form) {
+            FormExperience::intro($form, '优惠券', '优惠券按固定金额减免；关联商品、保持启用且有可用次数时，客户才可使用。');
             $form->display('id');
-            $form->multipleSelect('goods', admin_trans('coupon.fields.goods_id'))
+            $form->multipleSelect('goods', '适用商品')->placeholder('选择可使用此优惠券的商品')->help('可选择多个商品；清空后保留优惠券，但没有可使用的商品。')
                 ->options(Goods::all()->pluck('gd_name', 'id'))
                 ->customFormat(function ($v) {
                     if (! $v) {
@@ -104,11 +110,12 @@ class CouponController extends AdminController
                     // 从数据库中查出的二维数组中转化成ID
                     return array_column($v, 'id');
                 });
-            $form->currency('discount')->default(0)->required();
-            $form->text('coupon')->required();
-            $form->number('ret')->default(1);
-            $form->radio('is_use')->options(CouponModel::getStatusUseMap())->default(CouponModel::STATUS_UNUSED);
-            $form->switch('is_open')->default(CouponModel::STATUS_OPEN);
+            FormExperience::section($form, '优惠金额与可用次数', '例如金额填 5 表示减免 5 元，可用次数填 10 表示最多再使用 10 次。');
+            $form->currency('discount', '减免金额（元）')->default(0)->help('填写固定减免金额，例如 5.00 表示减 5 元。')->required();
+            $form->text('coupon', '优惠码')->placeholder('例如：WELCOME5')->help('客户下单时输入的优惠码。')->required();
+            $form->number('ret', '剩余可用次数')->default(1)->help('每次成功使用会扣减次数，0 表示没有可用次数。');
+            $form->radio('is_use', '使用状态')->options(CouponModel::getStatusUseMap())->default(CouponModel::STATUS_UNUSED)->help('新优惠券通常选择未使用。');
+            $form->switch('is_open', '启用优惠券')->default(CouponModel::STATUS_OPEN)->help('关闭后客户暂时停用此优惠码。');
             $form->display('created_at');
             $form->display('updated_at');
         });

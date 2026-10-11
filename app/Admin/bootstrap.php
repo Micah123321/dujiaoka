@@ -1,5 +1,6 @@
 <?php
 
+use App\Admin\Support\AdminTheme;
 use App\Admin\Support\OperationsAccess;
 use App\Admin\Support\WorkbenchAssets;
 use Dcat\Admin\Admin;
@@ -7,6 +8,7 @@ use Dcat\Admin\Admin;
 $bodyClasses = config('admin.layout.body_class', []);
 $bodyClasses = is_array($bodyClasses) ? $bodyClasses : preg_split('/\s+/', (string) $bodyClasses, -1, PREG_SPLIT_NO_EMPTY);
 config(['admin.layout.body_class' => array_values(array_unique(array_merge($bodyClasses, ['dujiaoka-admin'])))]);
+AdminTheme::register();
 WorkbenchAssets::register();
 
 Admin::menu(function ($menu) {
