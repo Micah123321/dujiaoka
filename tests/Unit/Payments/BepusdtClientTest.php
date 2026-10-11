@@ -19,6 +19,34 @@ class BepusdtClientTest extends TestCase
     private const GOLDEN = 'f217e9057f979dda820585c409dca27b';
     private const PAYMENT_URL = 'http://checkout.other.test/payment/be-trade-01';
 
+    public function testCashierEndpointsAndUnselectedNetwork(): void
+    {
+        foreach (['', '/api/v1/order/create-transaction', '/api/v1/order/create-order/'] as $suffix) {
+            $history = [];
+            $credentials = $this->credentials();
+            $credentials['method'] = 'USDT';
+            $credentials['endpoint'] .= $suffix;
+            $client = $this->client([$this->response(['trade_type' => '', 'status' => 1])], $history);
+            self::assertSame(self::PAYMENT_URL, $client->create($credentials, $this->order()));
+            self::assertSame('https://gateway.test/api/v1/order/create-order', (string) $history[0]['request']->getUri());
+            $data = json_decode((string) $history[0]['request']->getBody(), true);
+            self::assertSame('USDT', $data['currencies']);
+            self::assertArrayNotHasKey('trade_type', $data);
+            self::assertSame($this->originalSignature($data), $data['signature']);
+            foreach (['usdt.trc20', 'usdt.bep20', 'usdt.polygon'] as $network) {
+                $receipt = $this->notification();
+                $receipt['trade_type'] = $network;
+                $receipt = $this->signed($receipt);
+                self::assertSame($receipt, $client->verify($receipt, $credentials));
+            }
+            $receipt = $this->notification();
+            $receipt['trade_type'] = 'usdc.polygon';
+            $this->failure(function () use ($client, $receipt, $credentials) {
+                $client->verify($this->signed($receipt), $credentials);
+            });
+        }
+    }
+
     private function credentials(): array
     {
         return ['key' => 'be-test-key', 'endpoint' => 'https://gateway.test', 'method' => 'usdt.trc20'];

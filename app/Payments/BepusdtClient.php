@@ -32,6 +32,7 @@ class BepusdtClient
 
     public function create(array $credentials, array $order): string
     {
+        $stage = 1; // Configuration and local request validation.
         try {
             self::credentials($credentials);
             if (count($order) !== 4 || array_diff(array_keys($order), ['order_sn', 'amount', 'notify_url', 'return_url'])) {
@@ -44,20 +45,24 @@ class BepusdtClient
                 throw new RuntimeException();
             }
             $amount = CurrencyAmount::cny($order['amount']);
+            $cashier = strtolower($credentials['method']) === 'usdt';
             $data = [
                 'order_id' => $order['order_sn'],
                 'amount' => rtrim(rtrim($amount, '0'), '.'),
                 'fiat' => 'CNY',
-                'trade_type' => $credentials['method'],
+                ($cashier ? 'currencies' : 'trade_type') => $cashier ? 'USDT' : $credentials['method'],
                 'notify_url' => $order['notify_url'],
                 'redirect_url' => $order['return_url'],
             ];
             $data['signature'] = self::signature($data, $credentials['key']);
             $endpoint = rtrim($credentials['endpoint'], '/');
-            if (substr($endpoint, -strlen(self::CREATE_PATH)) !== self::CREATE_PATH) $endpoint .= self::CREATE_PATH;
+            // Accept either existing full API address when switching checkout modes.
+            $endpoint = preg_replace('~/api/v1/order/create-(?:transaction|order)$~', '', $endpoint);
+            $endpoint .= $cashier ? '/api/v1/order/create-order' : self::CREATE_PATH;
             if (!self::url($endpoint, false)) throw new RuntimeException();
             $request = new Request('POST', $endpoint, ['Content-Type' => 'application/json'],
                 JsonNotification::encode($data, ['amount']));
+            $stage = 2; // Connection, TLS or timeout.
             $response = $this->http->send($request, [
                 'headers' => null, 'auth' => null,
                 'verify' => true, 'allow_redirects' => false, 'http_errors' => false,
@@ -66,6 +71,7 @@ class BepusdtClient
                 'decode_content' => false, 'expect' => false, 'stream' => true,
                 'version' => '1.1', 'idn_conversion' => false, 'protocols' => ['http', 'https'],
             ]);
+            $stage = 3; // HTTP status and response size.
             $body = $response->getBody();
             try {
                 if ($response->getStatusCode() !== 200) throw new RuntimeException();
@@ -78,11 +84,13 @@ class BepusdtClient
             } finally {
                 $body->close();
             }
+            $stage = 4; // Invalid JSON or provider rejection.
             $result = json_decode($raw, false, 8, JSON_THROW_ON_ERROR | JSON_BIGINT_AS_STRING);
             if (!$result instanceof \stdClass || !in_array($result->status_code ?? null, [200, '200'], true)
                 || !($result->data ?? null) instanceof \stdClass || !self::url($result->data->payment_url ?? null)) {
                 throw new RuntimeException();
             }
+            $stage = 5; // Response does not match the requested order.
             $echo = get_object_vars($result->data);
             if ((array_key_exists('order_id', $echo) && (!self::identifier($echo['order_id']) || $echo['order_id'] !== $order['order_sn']))
                 || (array_key_exists('amount', $echo) && CurrencyAmount::cny($echo['amount']) !== $amount)
@@ -92,7 +100,7 @@ class BepusdtClient
             }
             return $echo['payment_url'];
         } catch (Throwable $exception) {
-            throw new RuntimeException(self::FAILURE);
+            throw new RuntimeException(self::FAILURE, $stage);
         }
     }
 
@@ -168,8 +176,15 @@ class BepusdtClient
 
     private static function echoes(array $data, array $credentials): bool
     {
-        return (!array_key_exists('fiat', $data) || $data['fiat'] === 'CNY')
-            && (!array_key_exists('trade_type', $data) || $data['trade_type'] === $credentials['method']);
+        $cashier = strtolower($credentials['method']) === 'usdt';
+        // The network is selected on the provider's cashier, not in the shop configuration.
+        $typeMatches = !array_key_exists('trade_type', $data)
+            || ($cashier
+                ? (is_string($data['trade_type']) && preg_match('/\Ausdt\.[a-z0-9_-]+\z/', $data['trade_type']) === 1)
+                : $data['trade_type'] === $credentials['method']);
+        // A newly created cashier order may not have a network selected yet.
+        if ($cashier && ($data['trade_type'] ?? null) === '' && !in_array($data['status'] ?? null, [2, '2'], true)) $typeMatches = true;
+        return (!array_key_exists('fiat', $data) || $data['fiat'] === 'CNY') && $typeMatches;
     }
 
     private static function url($value, bool $allowQuery = true): bool

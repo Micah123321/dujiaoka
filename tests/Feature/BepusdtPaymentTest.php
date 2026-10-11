@@ -87,6 +87,26 @@ class BepusdtPaymentTest extends TestCase
         $this->assertSame(md5('amount=28.88&fiat=CNY&notify_url=http://localhost/pay/bepusdt/notify_url&order_id=test-order&redirect_url=http://localhost/pay/bepusdt/return_url?order_id=test-order&trade_type=usdt.trc20test-token'), $data['signature']);
     }
 
+    public function testUsdtCheckoutAllowsNetworkSelectionAndReceipts(): void
+    {
+        $this->gateway->pay_check = 'USDT';
+        $this->gateway->save();
+        $this->app->make('Service\PayService')->shouldReceive('detailByCheck')->with('USDT')->andReturn($this->gateway);
+        $this->mockGateway(new Response(200, [], json_encode(['status_code' => 200,
+            'data' => ['payment_url' => 'https://gateway.example/pay/test', 'trade_type' => 'usdt.trc20']])));
+        $this->get('/pay/bepusdt/USDT/test-order')->assertRedirect('https://gateway.example/pay/test');
+        $data = json_decode((string) $this->history[0]['request']->getBody(), true);
+        $this->assertSame('https://gateway.example/api/v1/order/create-order', (string) $this->history[0]['request']->getUri());
+        $this->assertSame('USDT', $data['currencies']);
+        $this->assertArrayNotHasKey('trade_type', $data);
+        $this->assertSame(md5('amount=28.88&currencies=USDT&fiat=CNY&notify_url=http://localhost/pay/bepusdt/notify_url&order_id=test-order&redirect_url=http://localhost/pay/bepusdt/return_url?order_id=test-ordertest-token'), $data['signature']);
+        $this->processor->shouldReceive('completedOrder')->times(3)->with('test-order', 28.88, 'gateway-trade', Mockery::type('callable'));
+        foreach (['usdt.trc20', 'usdt.bep20', 'usdt.polygon'] as $network) {
+            $this->postJson('/pay/bepusdt/notify_url', $this->notification(['trade_type' => $network]))->assertOk()->assertSeeText('ok');
+        }
+        $this->assertSame('fail', $this->postJson('/pay/bepusdt/notify_url', $this->notification(['trade_type' => 'usdc.polygon']))->getContent());
+    }
+
     public function testAcceptsFullEndpoint(): void
     {
         $this->gateway->merchant_pem = 'https://gateway.example/api/v1/order/create-transaction/';

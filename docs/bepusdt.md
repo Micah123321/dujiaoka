@@ -1,6 +1,6 @@
 # BEpusdt 支付
 
-使用 BEpusdt 原生 create-transaction 接口，复用商城订单与发货流程，无需新增依赖。原 Epusdt 通道保持独立。
+使用 BEpusdt 原生收银台接口，买家选择 USDT 后可在收银台自行选择网络，复用商城订单与发货流程，无需新增依赖。固定网络支付仍使用 create-transaction 接口。
 
 ## 后台配置
 
@@ -16,17 +16,23 @@ docker compose --env-file .env.compose exec --user application web php artisan m
 
 | 字段 | 填写内容 |
 | --- | --- |
-| 支付名称 | USDT（TRC20）或自定义名称 |
+| 支付名称 | USDT |
 | 商户 ID | BEpusdt 后台「系统管理 → 基本设置 → API 设置」的对接令牌（AUTH_TOKEN） |
 | 商户 KEY | 留空 |
 | 商户密钥 | BEpusdt 地址，例如 https://pay.example.com，也支持完整的 /api/v1/order/create-transaction 地址 |
-| 支付标识 | usdt.trc20；其他币种/网络按 BEpusdt 的 trade_type 填写，例如 usdt.erc20、tron.trx |
+| 支付标识 | USDT（自选网络）；需要固定网络时填 usdt.trc20、usdt.erc20 等 |
 | 支付场景 | 通用 |
 | 支付方式 | 跳转 |
 | 支付处理路由 | pay/bepusdt |
 | 是否启用 | 是 |
 
-商城金额按 CNY 传递，链上应付数量及汇率由 BEpusdt 计算。每个支付标识应唯一；配置多条通道时使用不同交易类型。BEpusdt 需已配置对应网络的钱包。
+支付标识 `USDT`（不区分大小写）调用 `/api/v1/order/create-order`，传入 `currencies=USDT`，不指定网络。买家在 BEpusdt 收银台选择 BSC、Polygon、Tron 等已启用的网络。BEpusdt 版本须支持 create-order 接口，并配置对应网络的 USDT 钱包。服务地址可填域名或任一完整创建接口地址，程序会按模式选择接口。固定网络标识仍调用 create-transaction。商城金额按 CNY 传递，链上应付数量及汇率由 BEpusdt 计算。每个支付标识应唯一；配置多条通道时使用不同交易类型。BEpusdt 需已配置对应网络的钱包。
+
+## 支付失败排查
+
+启用自选网络：更新代码后，在支付渠道选择「USDT · 自选网络」（标识 USDT），保存并新建订单测试。旧的 TRC20 模板可直接编辑，无需为每条链新增渠道。修改本地代码不会自动更新远程站点。
+
+应用日志中的 `BEpusdt checkout failed.` 包含订单号和脱敏 `stage`：1 为本地参数/配置，2 为连接/TLS/超时，3 为 HTTP 状态或响应大小，4 为 JSON/网关业务拒绝，5 为返回订单字段不匹配。日志不记录对接令牌、签名或原始网关响应。
 
 ## 回调与验证
 

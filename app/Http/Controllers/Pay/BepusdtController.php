@@ -27,7 +27,7 @@ class BepusdtController extends PayController
             return redirect()->away($paymentUrl);
         } catch (RuleValidationException $exception) { return $this->err($exception->getMessage()); }
         catch (Throwable $exception) {
-            Log::warning('BEpusdt checkout failed.', ['category' => get_class($exception)]);
+            Log::warning('BEpusdt checkout failed.', ['category' => get_class($exception), 'stage' => $exception->getCode(), 'order_sn' => $orderSN]);
             return $this->err(__('dujiaoka.prompt.abnormal_payment_channel'));
         }
     }
@@ -59,7 +59,8 @@ class BepusdtController extends PayController
 
     private function credentials(Pay $gateway): array
     {
-        return ['key' => (string) $gateway->merchant_id, 'endpoint' => trim((string) $gateway->merchant_pem), 'method' => (string) $gateway->pay_check];
+        $method = strtolower(trim((string) $gateway->pay_check));
+        return ['key' => (string) $gateway->merchant_id, 'endpoint' => trim((string) $gateway->merchant_pem), 'method' => $method];
     }
 
 
